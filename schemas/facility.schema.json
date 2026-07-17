@@ -1,0 +1,23 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://allocation-as-code.internal/schemas/facility.schema.json",
+  "title": "Facility",
+  "description": "A site/plant belonging to a company. Lists one or more buildings whose search strategy this repo configures. facility.id is meant to match the same facility id in Topology-as-Code, but that's a convention, not a cross-repo schema link - see README 'Shared Vocabulary'.",
+  "type": "object",
+  "required": ["facility"],
+  "properties": {
+    "facility": {
+      "type": "object",
+      "required": ["id", "name", "buildings"],
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "buildings": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Relative paths to allocation.yaml files."
+        }
+      }
+    }
+  }
+}

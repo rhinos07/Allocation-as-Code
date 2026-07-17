@@ -1,0 +1,19 @@
+# Reusable catalog of ways to select among multiple matching candidates
+# within one search_rule step. Referenced by
+# strategies/search_rules.yaml -> search_rule.steps[].selection_strategy.
+
+selection_strategies:
+  - id: "FIFO"
+    description: "First-in-first-out - oldest goods-receipt date first."
+
+  - id: "FEFO"
+    description: "First-expire-first-out - earliest expiry/best-before date first. Typically paired with constraints.min_remaining_shelf_life_days."
+
+  - id: "LIFO"
+    description: "Last-in-first-out - most recently received first, e.g. to match a block storage_type's access_constraint in Topology-as-Code."
+
+  - id: "NEAREST_TO_TARGET"
+    description: "Candidate physically closest to the order's target, minimizing travel distance."
+
+  - id: "LOWEST_QUANTITY_FIRST"
+    description: "Candidate with the least remaining quantity first, to free up storage capacity sooner (empty out partial bins before opening new ones)."

@@ -1,0 +1,17 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://allocation-as-code.internal/schemas/selection-strategy.schema.json",
+  "title": "Selection Strategy",
+  "description": "Catalog entry describing a rule for picking among multiple matching candidates within one search_rule step. Referenced by search_rule.steps[].selection_strategy.",
+  "type": "object",
+  "required": ["id"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Z0-9_]+$",
+      "description": "Unique ID, e.g. 'FEFO'"
+    },
+    "description": { "type": "string" }
+  },
+  "additionalProperties": true
+}

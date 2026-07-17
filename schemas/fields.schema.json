@@ -1,0 +1,30 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://allocation-as-code.internal/schemas/fields.schema.json",
+  "title": "Building Field Configuration",
+  "description": "Restricts which zone types and selection strategies this building's search_rules are allowed to use.",
+  "type": "object",
+  "required": ["fields"],
+  "properties": {
+    "fields": {
+      "type": "object",
+      "required": ["allowed_zone_types", "allowed_selection_strategies"],
+      "properties": {
+        "allowed_zone_types": {
+          "type": "array",
+          "items": { "type": "string", "enum": ["storage_type", "activity_area"] },
+          "minItems": 1,
+          "description": "Which Topology-as-Code entity kinds a search_rule.steps[].zone may reference."
+        },
+        "allowed_selection_strategies": {
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 1,
+          "description": "Subset of elements/selection_strategies.yaml ids usable in this building's search_rules."
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

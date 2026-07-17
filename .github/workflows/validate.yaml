@@ -1,0 +1,50 @@
+# CI pipeline. Logic is 1:1 portable to TeamCity
+# (PowerShell build step: pip install -r requirements.txt && python tools/validate.py ...)
+name: Validate allocation definitions
+
+on:
+  pull_request:
+    paths:
+      - "customers/**"
+      - "elements/**"
+      - "schemas/**"
+      - "tools/**"
+      - ".github/workflows/validate.yaml"
+  push:
+    branches: [main]
+
+jobs:
+  # Discover the customers to validate from the filesystem, so a new
+  # customers/<name>/company.yaml is picked up automatically without
+  # editing this workflow.
+  discover:
+    runs-on: ubuntu-latest
+    outputs:
+      customers: ${{ steps.list.outputs.customers }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: list
+        run: |
+          customers=$(for d in customers/*/; do
+            [ -f "$d/company.yaml" ] && basename "$d"
+          done | jq -R -s -c 'split("\n") | map(select(length > 0))')
+          echo "Discovered customers: $customers"
+          echo "customers=$customers" >> "$GITHUB_OUTPUT"
+
+  validate:
+    needs: discover
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        customer: ${{ fromJson(needs.discover.outputs.customers) }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install -r requirements.txt
+
+      - name: Validate (schema conformance + cross-file consistency)
+        run: python tools/validate.py customers/${{ matrix.customer }}/company.yaml

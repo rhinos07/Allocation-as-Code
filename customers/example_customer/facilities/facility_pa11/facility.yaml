@@ -1,0 +1,10 @@
+# Lists buildings. Validates against schemas/facility.schema.json
+# id matches Topology-as-Code's customers/example_customer facility - see
+# README "Shared Vocabulary".
+
+facility:
+  id: "facility_pa11"
+  name: "Plant PA11"
+
+  buildings:
+    - "buildings/hall_3/allocation.yaml"

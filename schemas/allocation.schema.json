@@ -1,0 +1,23 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://allocation-as-code.internal/schemas/allocation.schema.json",
+  "title": "Allocation (Building-Level)",
+  "description": "A building's stock-search configuration. Building id is meant to match the same building id in Topology-as-Code, same convention as facility.id.",
+  "type": "object",
+  "required": ["allocation"],
+  "properties": {
+    "allocation": {
+      "type": "object",
+      "required": ["id", "imports"],
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "imports": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Relative paths to further YAML files (structure/, strategies/)."
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,11 @@
+# Which zone types and selection strategies this building's search_rules
+# are allowed to use. Validates against schemas/fields.schema.json
+
+fields:
+  allowed_zone_types:
+    - "activity_area"
+    - "storage_type"
+  allowed_selection_strategies:
+    - "FEFO"
+    - "FIFO"
+    - "NEAREST_TO_TARGET"

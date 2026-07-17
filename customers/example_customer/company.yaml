@@ -1,0 +1,8 @@
+# Top level, lists facilities. Validates against schemas/company.schema.json
+
+company:
+  id: "example_customer"
+  name: "Example Customer GmbH"
+
+  facilities:
+    - "facilities/facility_pa11/facility.yaml"

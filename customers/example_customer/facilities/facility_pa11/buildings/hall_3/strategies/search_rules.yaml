@@ -1,0 +1,34 @@
+# The frequently-changed, customizable part: for a given item/category,
+# the ordered sequence of zones to search and how to pick among matches
+# within each. Validates against schemas/search-rule.schema.json (per
+# entry). Zone ids are Topology-as-Code's customers/example_customer/
+# .../hall_3 ids (see its structure/storage.yaml).
+
+search_rules:
+  # Default/fallback: applies to any item with no more specific rule
+  # below. Exactly one search_rule per building should omit applies_to -
+  # tools/validate.py checks this.
+  - id: "SEARCH_DEFAULT"
+    steps:
+      - zone: { type: "activity_area", id: "PICK_ZONE_A" }
+        selection_strategy: "FIFO"
+      - zone: { type: "storage_type", id: "HBR" }
+        selection_strategy: "FIFO"
+
+  # ITEM_003 (see WMS-POC's inbound_advice scenario) needs FEFO with a
+  # shelf-life floor - a more specific rule than the default, and takes
+  # precedence for that one item per search-rule.schema.json's
+  # applies_to.item_id precedence rule.
+  - id: "SEARCH_ITEM_003_FEFO"
+    applies_to:
+      item_id: "ITEM_003"
+    steps:
+      - zone: { type: "activity_area", id: "PICK_ZONE_A" }
+        selection_strategy: "FEFO"
+        constraints:
+          exclude_quality_hold: true
+          min_remaining_shelf_life_days: 30
+      - zone: { type: "storage_type", id: "HBR" }
+        selection_strategy: "FEFO"
+        constraints:
+          exclude_quality_hold: true

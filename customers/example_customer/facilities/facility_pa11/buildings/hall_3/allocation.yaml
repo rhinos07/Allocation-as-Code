@@ -1,0 +1,11 @@
+# Building-level file. Short and stable - references everything else.
+# id matches Topology-as-Code's hall_3 building - see README "Shared
+# Vocabulary". Validates against schemas/allocation.schema.json
+
+allocation:
+  id: "hall_3"
+  name: "Hall 3 Stock Search"
+
+  imports:
+    - "structure/fields.yaml"
+    - "strategies/search_rules.yaml"

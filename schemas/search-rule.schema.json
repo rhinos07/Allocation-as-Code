@@ -1,0 +1,61 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://allocation-as-code.internal/schemas/search-rule.schema.json",
+  "title": "Search Rule",
+  "description": "Defines the ordered sequence of zones to search for matching stock, and how to select among candidates within each zone, for a given item/category scope. Does not itself search live inventory - see README 'What this repo is not'.",
+  "type": "object",
+  "required": ["id", "steps"],
+  "properties": {
+    "id": { "type": "string" },
+    "applies_to": {
+      "type": "object",
+      "properties": {
+        "category": {
+          "type": "string",
+          "description": "References an id in MasterData-as-Code."
+        },
+        "item_id": {
+          "type": "string",
+          "description": "References an id in MasterData-as-Code. More specific than category - takes precedence when both a category-scoped and an item-scoped rule could match the same item."
+        }
+      },
+      "additionalProperties": false,
+      "minProperties": 1,
+      "description": "Scopes this rule to a category or a specific item. Omit entirely for this building's default/fallback rule - exactly one search_rule per building should omit applies_to, see tools/validate.py."
+    },
+    "steps": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Ordered search sequence: step 1 is tried first, later steps are fallbacks only consulted if earlier steps don't yield enough quantity. Whether/how quantity found across multiple steps combines into one pick or is split into several sub-orders is OrderOrchestration-as-Code's split_rule concern, not this repo's.",
+      "items": {
+        "type": "object",
+        "required": ["zone", "selection_strategy"],
+        "properties": {
+          "zone": {
+            "type": "object",
+            "required": ["type", "id"],
+            "properties": {
+              "type": { "type": "string", "enum": ["storage_type", "activity_area"] },
+              "id": { "type": "string", "description": "A Topology-as-Code storage_type/activity_area id." }
+            },
+            "additionalProperties": false
+          },
+          "selection_strategy": {
+            "type": "string",
+            "description": "References an id in elements/selection_strategies.yaml."
+          },
+          "constraints": {
+            "type": "object",
+            "properties": {
+              "exclude_quality_hold": { "type": "boolean" },
+              "min_remaining_shelf_life_days": { "type": "integer", "minimum": 0 }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}
