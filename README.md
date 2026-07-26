@@ -90,6 +90,25 @@ allocation-definitions/
 └── .github/workflows/validate.yaml   # CI pipeline (dynamic per-customer matrix)
 ```
 
+## Schema Versioning
+
+Every `allocation.yaml` declares the schema generation it conforms to:
+
+```yaml
+api_version: "allocation-as-code/v1"
+```
+
+It sits on the building because that is this repo's self-contained,
+independently loadable scope - the same role `warehouse.yaml` plays in
+`Topology-as-Code`. `company.yaml` and `facility.yaml` index the level
+below them rather than being datasets of their own, so they carry no
+version.
+
+An incompatible change raises the version rather than silently
+reinterpreting existing data. See
+[`Warehouse-as-Code` ADR-0001](https://github.com/rhinos07/Warehouse-as-Code/blob/main/docs/adr/0001-layered-specification-model.md),
+measure 2.
+
 ## Quickstart
 
 ```bash
