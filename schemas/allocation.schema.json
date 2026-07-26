@@ -4,8 +4,12 @@
   "title": "Allocation (Building-Level)",
   "description": "A building's stock-search configuration. Building id is meant to match the same building id in Topology-as-Code, same convention as facility.id.",
   "type": "object",
-  "required": ["allocation"],
+  "required": ["api_version", "allocation"],
   "properties": {
+    "api_version": {
+      "const": "allocation-as-code/v1",
+      "description": "Schema generation this allocation document conforms to. Declared on the building because that is this repo's self-contained, independently loadable scope - the same role warehouse.yaml plays in Topology-as-Code. A future incompatible change to this repo's schemas raises the version instead of silently reinterpreting existing data."
+    },
     "allocation": {
       "type": "object",
       "required": ["id", "imports"],

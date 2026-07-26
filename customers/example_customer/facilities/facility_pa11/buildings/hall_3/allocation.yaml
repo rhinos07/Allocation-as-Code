@@ -2,6 +2,8 @@
 # id matches Topology-as-Code's hall_3 building - see README "Shared
 # Vocabulary". Validates against schemas/allocation.schema.json
 
+api_version: "allocation-as-code/v1"
+
 allocation:
   id: "hall_3"
   name: "Hall 3 Stock Search"
