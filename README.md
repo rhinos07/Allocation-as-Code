@@ -125,10 +125,18 @@ python tools/validate.py customers/example_customer/company.yaml
 
 - `customers/example_customer/facilities/facility_pa11/buildings/hall_3/`
   - re-uses `Topology-as-Code`'s real `hall_3` zone ids
-    (`PICK_ZONE_A`, `HBR`) so the example stays checkable against real
-    topology, not invented ids.
+    (`PICK_ZONE_A`, `AUTOSTORE_A`, `HBR`) so the example stays checkable
+    against real topology, not invented ids.
   - `SEARCH_DEFAULT` - the building's fallback rule (no `applies_to`):
-    search `PICK_ZONE_A` first, then `HBR`, both `FIFO`.
+    search `PICK_ZONE_A`, then `AUTOSTORE_A`, then `HBR`, all `FIFO`.
+    Sequenced pickface first, then the automated cell, bulk rack last.
+    `AUTOSTORE_A` matters beyond ordering: it is this building's only
+    zone resolving to `Topology-as-Code`'s `autostore` technology, so
+    without it a search-driven allocation could never produce the
+    AutoStore/manual split `OrderOrchestration-as-Code`'s `b2c_standard`
+    scenario describes (`HBR` resolves to `shuttle`, a technology no
+    example `split_rule` claims - found by `WMS-POC` actually running
+    this rule against real technology data, see its README Finding #9).
   - `SEARCH_ITEM_003_FEFO` - a more specific rule for `ITEM_003` (the
     same item id used in `OrderOrchestration-as-Code`'s `WMS-POC`
     inbound scenario): `FEFO` with a 30-day minimum remaining shelf

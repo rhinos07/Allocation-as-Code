@@ -8,9 +8,23 @@ search_rules:
   # Default/fallback: applies to any item with no more specific rule
   # below. Exactly one search_rule per building should omit applies_to -
   # tools/validate.py checks this.
+  #
+  # Sequenced pickface -> automated cell -> bulk rack: try the small,
+  # fast-pick face first, then the AutoStore cell (fast, goods-to-person),
+  # falling back to bulk shuttle-rack storage last. Before AUTOSTORE_A was
+  # added here, this rule could never resolve to Topology-as-Code's
+  # 'autostore' technology at all - only 'manual_warehouse' (PICK_ZONE_A)
+  # or 'shuttle' (HBR, not a technology any example order_type's
+  # split_rule claims) - so a search-driven allocation could never produce
+  # the AutoStore/manual split OrderOrchestration-as-Code's b2c_standard
+  # scenario describes. Found by WMS-POC actually running this rule
+  # against real Topology-as-Code technology data (see its README
+  # Finding #9), not by design.
   - id: "SEARCH_DEFAULT"
     steps:
       - zone: { type: "activity_area", id: "PICK_ZONE_A" }
+        selection_strategy: "FIFO"
+      - zone: { type: "storage_type", id: "AUTOSTORE_A" }
         selection_strategy: "FIFO"
       - zone: { type: "storage_type", id: "HBR" }
         selection_strategy: "FIFO"
