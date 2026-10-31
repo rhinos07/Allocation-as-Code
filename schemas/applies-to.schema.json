@@ -1,0 +1,25 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://allocation-as-code.internal/schemas/applies-to.schema.json",
+  "title": "Applies-To Scope",
+  "description": "Scopes a search_rule or putaway_rule. Allowed combinations: {item_id}, {owner, category}, {owner}, {category}. Omit applies_to entirely for the building's default rule. Precedence, most specific first: item_id > owner + category > owner > category > default (see tools/precedence.py). Two rules of the same kind with the same scope are rejected by tools/validate.py.",
+  "type": "object",
+  "properties": {
+    "item_id": {
+      "type": "string",
+      "description": "References an item id in MasterData-as-Code. The item already belongs to exactly one owner and one category, so item_id stands alone."
+    },
+    "owner": {
+      "type": "string",
+      "description": "References an owner id in MasterData-as-Code company.yaml owners. Only for multi-owner warehouses."
+    },
+    "category": {
+      "type": "string",
+      "description": "References a category id in MasterData-as-Code."
+    }
+  },
+  "additionalProperties": false,
+  "minProperties": 1,
+  "if": { "required": ["item_id"] },
+  "then": { "maxProperties": 1 }
+}

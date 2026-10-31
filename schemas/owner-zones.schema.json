@@ -1,0 +1,38 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://allocation-as-code.internal/schemas/owner-zones.schema.json",
+  "title": "Owner Zones",
+  "description": "Zones reserved for specific stock owners in a multi-owner warehouse (myWMS StorageLocation.client / onlyClientLocation). A putaway_rule may place into a reserved zone only when its applies_to.owner is one of the zone's owners. Zones not listed here are open to every owner.",
+  "type": "object",
+  "required": ["owner_zones"],
+  "properties": {
+    "owner_zones": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["zone", "owners"],
+        "properties": {
+          "zone": {
+            "type": "object",
+            "required": ["type", "id"],
+            "properties": {
+              "type": { "type": "string", "enum": ["storage_type", "activity_area"] },
+              "id": { "type": "string", "description": "A Topology-as-Code storage_type/activity_area id." }
+            },
+            "additionalProperties": false
+          },
+          "owners": {
+            "type": "array",
+            "items": { "type": "string" },
+            "minItems": 1,
+            "uniqueItems": true,
+            "description": "MasterData-as-Code owner ids allowed to put away into this zone."
+          },
+          "description": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

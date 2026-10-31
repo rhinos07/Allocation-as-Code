@@ -9,20 +9,8 @@
     "id": { "type": "string" },
     "description": { "type": "string" },
     "applies_to": {
-      "type": "object",
-      "properties": {
-        "category": {
-          "type": "string",
-          "description": "References an id in MasterData-as-Code."
-        },
-        "item_id": {
-          "type": "string",
-          "description": "References an id in MasterData-as-Code. More specific than category - takes precedence when both a category-scoped and an item-scoped rule could match the same item. Same precedence as search_rule.applies_to."
-        }
-      },
-      "additionalProperties": false,
-      "minProperties": 1,
-      "description": "Scopes this rule to a category or a specific item. Omit entirely for this building's default/fallback putaway rule - at most one putaway_rule per building may omit applies_to, see tools/validate.py."
+      "$ref": "applies-to.schema.json",
+      "description": "Scopes this rule to an item, an owner and/or a category - see applies-to.schema.json for the allowed combinations and the precedence. Omit entirely for this building's default/fallback rule; at most one putaway_rule per building may omit it, see tools/validate.py."
     },
     "steps": {
       "type": "array",
@@ -58,6 +46,10 @@
               "allow_mixed_items": {
                 "type": "boolean",
                 "description": "Whether a storage place may hold stock of more than one item. Must not contradict the zone's Topology-as-Code homogeneity_required (cross-repo check not yet implemented)."
+              },
+              "allow_mixed_owners": {
+                "type": "boolean",
+                "description": "Whether a storage place may hold stock of more than one owner. Only meaningful in multi-owner warehouses (MasterData-as-Code company.yaml owners)."
               },
               "allow_mixed_lots": {
                 "type": "boolean",

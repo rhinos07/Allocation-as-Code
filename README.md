@@ -71,7 +71,9 @@ allocation-definitions/
 │   ├── search-rule.schema.json
 │   ├── selection-strategy.schema.json
 │   ├── putaway-rule.schema.json
-│   └── placement-strategy.schema.json
+│   ├── placement-strategy.schema.json
+│   ├── applies-to.schema.json    # Shared rule scope: item / owner / category
+│   └── owner-zones.schema.json   # Zones reserved for stock owners
 ├── elements/
 │   ├── selection_strategies.yaml # Catalog: FIFO, FEFO, LIFO, NEAREST_TO_TARGET, LOWEST_QUANTITY_FIRST
 │   └── placement_strategies.yaml # Catalog: NEXT_EMPTY, ADD_TO_EXISTING, SPREAD_ACROSS_AISLES, ...
@@ -85,14 +87,17 @@ allocation-definitions/
 │                   └── <building>/          # = Building
 │                       ├── allocation.yaml         # Imports structure/strategies below
 │                       ├── structure/
-│                       │   └── fields.yaml         # Allowed zone types / selection and placement strategies
+│                       │   ├── fields.yaml         # Allowed zone types / selection and placement strategies
+│                       │   └── owner_zones.yaml    # Optional: zones reserved for stock owners
 │                       └── strategies/
 │                           ├── search_rules.yaml   # Ordered search sequence per item/category
 │                           └── putaway_rules.yaml  # Ordered putaway sequence per item/category
 ├── tools/
-│   └── validate.py           # Validation script (schema + cross-file consistency checks)
+│   ├── validate.py           # Validation script (schema + cross-file consistency checks)
+│   └── precedence.py         # Reference implementation of applies_to precedence
 ├── tests/
-│   └── test_putaway_rules.py # Unit tests for the putaway validation rules
+│   ├── test_putaway_rules.py # Unit tests for the putaway validation rules
+│   └── test_owner_scopes.py  # Unit tests for owner scopes, precedence and owner zones
 ├── docs/
 │   └── entity-glossary.md
 └── .github/workflows/validate.yaml   # CI pipeline (dynamic per-customer matrix)
@@ -166,8 +171,13 @@ python -m unittest discover -s tests -v
 ## Core Concepts (Quick Reference)
 
 - **search_rule** — the ordered search sequence for a given
-  `applies_to` scope (`category` or `item_id`, or omitted for the
-  building's default). See `docs/entity-glossary.md`.
+  `applies_to` scope (`item_id`, `owner` + `category`, `owner`,
+  `category`, or omitted for the building's default - most specific
+  wins). See `docs/entity-glossary.md`.
+- **stock owners** — in multi-owner warehouses, rules can be scoped per
+  owner, putaway can forbid mixing owners on one place
+  (`allow_mixed_owners`), and `structure/owner_zones.yaml` reserves zones
+  for given owners.
 - **step** — one zone + `selection_strategy` + optional `constraints`
   within a `search_rule`, tried in order.
 - **selection_strategy** — how to pick among multiple matches within one
@@ -190,10 +200,14 @@ Full glossary: [`docs/entity-glossary.md`](docs/entity-glossary.md)
 - [ ] Cross-check `search_rule.steps[].zone.id` against an actual
       `Topology-as-Code` `storage_type`/`activity_area` id - not done,
       same category of gap `OrderOrchestration-as-Code` has for `target.id`.
-- [ ] Decide whether `applies_to` needs a tie-break rule for two rules of
-      equal specificity naming the same scope (see `docs/entity-glossary.md`
-      "Applies-To Precedence") - not yet a problem with only two example
-      rules, deliberately not designed prematurely.
+- [x] ~~Decide whether `applies_to` needs a tie-break rule for two rules
+      of equal specificity~~ - with the precedence item_id > owner +
+      category > owner > category > default, identical scopes are the only
+      possible tie, and `tools/validate.py` rejects them (see
+      `docs/entity-glossary.md` "Applies-To Precedence").
+- [ ] Cross-check `applies_to.owner` / `.category` / `.item_id` against
+      `MasterData-as-Code`, and putaway rules scoped by `item_id` against
+      `owner_zones` via the item's owner - cross-repo, not done here.
 - [ ] Cross-check `putaway_rule.steps[].constraints.load_unit_types`
       against `Topology-as-Code` `load_unit_type` ids and the zone's
       `allowed_load_unit_types`, and `allow_mixed_items: true` against the

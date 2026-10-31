@@ -8,20 +8,8 @@
   "properties": {
     "id": { "type": "string" },
     "applies_to": {
-      "type": "object",
-      "properties": {
-        "category": {
-          "type": "string",
-          "description": "References an id in MasterData-as-Code."
-        },
-        "item_id": {
-          "type": "string",
-          "description": "References an id in MasterData-as-Code. More specific than category - takes precedence when both a category-scoped and an item-scoped rule could match the same item."
-        }
-      },
-      "additionalProperties": false,
-      "minProperties": 1,
-      "description": "Scopes this rule to a category or a specific item. Omit entirely for this building's default/fallback rule - exactly one search_rule per building should omit applies_to, see tools/validate.py."
+      "$ref": "applies-to.schema.json",
+      "description": "Scopes this rule to an item, an owner and/or a category - see applies-to.schema.json for the allowed combinations and the precedence. Omit entirely for this building's default/fallback rule; at most one search_rule per building may omit it, see tools/validate.py."
     },
     "steps": {
       "type": "array",
