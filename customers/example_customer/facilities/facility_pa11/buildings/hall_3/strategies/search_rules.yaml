@@ -33,16 +33,14 @@ search_rules:
   # shelf-life floor - a more specific rule than the default, and takes
   # precedence for that one item per search-rule.schema.json's
   # applies_to.item_id precedence rule.
+  # Its stock lives in COLD_ZONE_B (chilled, see putaway_rules.yaml), so
+  # that is where the search looks.
   - id: "SEARCH_ITEM_003_FEFO"
     applies_to:
       item_id: "ITEM_003"
     steps:
-      - zone: { type: "activity_area", id: "PICK_ZONE_A" }
+      - zone: { type: "storage_type", id: "COLD_ZONE_B" }
         selection_strategy: "FEFO"
         constraints:
           exclude_quality_hold: true
           min_remaining_shelf_life_days: 30
-      - zone: { type: "storage_type", id: "HBR" }
-        selection_strategy: "FEFO"
-        constraints:
-          exclude_quality_hold: true

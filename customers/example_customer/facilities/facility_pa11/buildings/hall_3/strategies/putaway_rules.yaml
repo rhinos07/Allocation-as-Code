@@ -43,21 +43,17 @@ putaway_rules:
   # ITEM_003 is the FEFO item of SEARCH_ITEM_003_FEFO (search_rules.yaml).
   # Lot-pure places keep the FEFO search simple: one lot per place, so the
   # oldest-expiry place is also the oldest-expiry stock.
-  #
-  # Open: ITEM_003 cannot be routed to COLD_ZONE_B by item property,
-  # because MasterData-as-Code has no storage-condition attribute yet.
+  # ITEM_003 must be stored chilled (MasterData storage_condition), so it
+  # goes to COLD_ZONE_B only - the one chilled area, euro pallets only.
+  # Found by Warehouse-as-Code rule R11: the earlier HBR/BLK steps had no
+  # chilled place at all.
   - id: "PUTAWAY_ITEM_003_LOT_PURE"
     applies_to:
       item_id: "ITEM_003"
     steps:
-      - zone: { type: "storage_type", id: "HBR" }
+      - zone: { type: "storage_type", id: "COLD_ZONE_B" }
         placement_strategy: "NEAREST_TO_OUTFEED"
         constraints:
-          load_unit_types: ["pallet_euro", "pallet_industrial"]
-          allow_mixed_items: false
-          allow_mixed_lots: false
-      - zone: { type: "storage_type", id: "BLK" }
-        placement_strategy: "ADD_TO_EXISTING"
-        constraints:
+          load_unit_types: ["pallet_euro"]
           allow_mixed_items: false
           allow_mixed_lots: false
