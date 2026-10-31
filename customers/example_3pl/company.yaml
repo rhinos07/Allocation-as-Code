@@ -1,0 +1,10 @@
+# Stock search and putaway for the 3PL example (two stock owners in one
+# warehouse). Same company id as in Topology- and MasterData-as-Code.
+# This file validates against schemas/company.schema.json
+
+company:
+  id: "example_3pl"
+  name: "Example 3PL Logistics GmbH"
+
+  facilities:
+    - "facilities/facility_lp01/facility.yaml"

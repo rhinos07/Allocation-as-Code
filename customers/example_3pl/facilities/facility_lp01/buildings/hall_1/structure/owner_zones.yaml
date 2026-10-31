@@ -1,0 +1,13 @@
+# Zones reserved for one stock owner (MasterData-as-Code example_3pl
+# owners). Zones not listed are open to every owner - here the carton
+# shelf, shared for pick faces.
+# Validates against schemas/owner-zones.schema.json
+
+owner_zones:
+  - zone: { type: "activity_area", id: "PUTAWAY_ALPHA" }
+    owners: ["owner_alpha"]
+    description: "Rack aisles 1-2, Alpha Cosmetics only"
+
+  - zone: { type: "activity_area", id: "PUTAWAY_BETA" }
+    owners: ["owner_beta"]
+    description: "Rack aisles 3-4, Beta Machinery only"

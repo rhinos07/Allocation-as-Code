@@ -1,0 +1,14 @@
+# Building-level file. Validates against schemas/allocation.schema.json
+
+api_version: "allocation-as-code/v1"
+
+allocation:
+  id: "hall_1"
+  name: "Hall 1 Stock Search and Putaway (3PL)"
+
+  imports:
+    - "structure/fields.yaml"
+    - "structure/owner_zones.yaml"
+    - "strategies/search_rules.yaml"
+    - "strategies/putaway_rules.yaml"
+    - "strategies/fixed_bin_assignments.yaml"

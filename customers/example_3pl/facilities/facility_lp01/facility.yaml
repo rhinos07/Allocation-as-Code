@@ -1,0 +1,8 @@
+# This file validates against schemas/facility.schema.json
+
+facility:
+  id: "facility_lp01"
+  name: "Contract Logistics Center LP01"
+
+  buildings:
+    - "buildings/hall_1/allocation.yaml"

@@ -1,0 +1,26 @@
+# Where to search for stock, per scope. Validates against
+# schemas/search-rule.schema.json (per entry).
+
+search_rules:
+  # Default: pick faces first, then the rack.
+  - id: "SEARCH_DEFAULT"
+    steps:
+      - zone: { type: "activity_area", id: "PICK_SHELF" }
+        selection_strategy: "FIFO"
+      - zone: { type: "storage_type", id: "RACK" }
+        selection_strategy: "FIFO"
+
+  # Alpha's cosmetics carry a best-before date: FEFO with a floor below
+  # the 180-day receipt minimum (MasterData), so received stock can ship.
+  - id: "SEARCH_ALPHA_FEFO"
+    applies_to:
+      owner: "owner_alpha"
+    steps:
+      - zone: { type: "activity_area", id: "PICK_SHELF" }
+        selection_strategy: "FEFO"
+        constraints:
+          min_remaining_shelf_life_days: 90
+      - zone: { type: "activity_area", id: "PUTAWAY_ALPHA" }
+        selection_strategy: "FEFO"
+        constraints:
+          min_remaining_shelf_life_days: 90
