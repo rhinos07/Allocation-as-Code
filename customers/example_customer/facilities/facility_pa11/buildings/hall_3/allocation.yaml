@@ -12,3 +12,4 @@ allocation:
     - "structure/fields.yaml"
     - "strategies/search_rules.yaml"
     - "strategies/putaway_rules.yaml"
+    - "strategies/fixed_bin_assignments.yaml"

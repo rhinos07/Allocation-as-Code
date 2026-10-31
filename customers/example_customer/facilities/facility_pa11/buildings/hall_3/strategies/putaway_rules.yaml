@@ -16,6 +16,12 @@ putaway_rules:
   # rack, with block storage as the pallet fallback.
   - id: "PUTAWAY_DEFAULT"
     steps:
+      # Cartons first top up the item's fixed places (fixed_bin_assignments.yaml);
+      # cartons of items without a fixed place skip this step.
+      - zone: { type: "storage_type", id: "FIX" }
+        placement_strategy: "FIXED_BIN_FIRST"
+        constraints:
+          load_unit_types: ["carton"]
       - zone: { type: "storage_type", id: "AUTOSTORE_A" }
         placement_strategy: "DELEGATE_TO_CONTROLLER"
         constraints:

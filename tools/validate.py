@@ -161,6 +161,19 @@ def check_rule_scopes(path: Path, rules: list[dict], kind: str) -> list[str]:
     return errors
 
 
+def check_fixed_bin_strategy_needs_assignments(path: Path) -> list[str]:
+    """FIXED_BIN_FIRST without strategies/fixed_bin_assignments.yaml
+    in the building would have no fixed places to fill."""
+    errors: list[str] = []
+    for rule in (load_yaml(path) or {}).get("putaway_rules", []):
+        for i, step in enumerate(rule.get("steps", [])):
+            if step.get("placement_strategy") == "FIXED_BIN_FIRST":
+                errors.append(
+                    f"{path}: putaway_rule '{rule.get('id', '?')}' steps[{i}]: FIXED_BIN_FIRST but the building does not import strategies/fixed_bin_assignments.yaml"
+                )
+    return errors
+
+
 def check_owner_zones(path: Path, owner_zones_data: dict | None) -> list[str]:
     """Checks putaway_rules.yaml against structure/owner_zones.yaml: a
     step into a reserved zone needs a rule whose applies_to.owner is one
@@ -197,6 +210,45 @@ def check_owner_zones(path: Path, owner_zones_data: dict | None) -> list[str]:
                 errors.append(
                     f"{path}: putaway_rule '{rule_id}' steps[{i}]: zone '{zone.get('id')}' is reserved for owners {sorted(owners)}, not '{owner}'"
                 )
+    return errors
+
+
+def check_fixed_bin_assignments(path: Path) -> list[str]:
+    """Checks strategies/fixed_bin_assignments.yaml: min_qty <= max_qty,
+    max_pick_qty <= max_qty, a storage point fixed to at most one item,
+    and unique sequence numbers per item. Whether item_id and
+    storage_point exist in MasterData-/Topology-as-Code is a cross-repo
+    check (Warehouse-as-Code backlog C1a)."""
+    errors: list[str] = []
+    data = load_yaml(path)
+    if not data:
+        return errors
+
+    point_owner: dict[str, str] = {}
+    item_sequences: dict[str, dict[int, str]] = {}
+    for i, entry in enumerate(data.get("fixed_bin_assignments", [])):
+        item_id = entry.get("item_id", "?")
+        point = entry.get("storage_point", "?")
+        where = f"{path}: fixed_bin_assignments[{i}] ({item_id} @ {point})"
+
+        min_qty, max_qty = entry.get("min_qty"), entry.get("max_qty")
+        if isinstance(min_qty, (int, float)) and isinstance(max_qty, (int, float)) and min_qty > max_qty:
+            errors.append(f"{where}: min_qty ({min_qty}) exceeds max_qty ({max_qty})")
+        max_pick = entry.get("max_pick_qty")
+        if isinstance(max_pick, (int, float)) and isinstance(max_qty, (int, float)) and max_pick > max_qty:
+            errors.append(f"{where}: max_pick_qty ({max_pick}) exceeds max_qty ({max_qty})")
+
+        if point in point_owner and point_owner[point] != item_id:
+            errors.append(f"{where}: storage_point already fixed to item '{point_owner[point]}'")
+        elif point in point_owner:
+            errors.append(f"{where}: duplicate assignment of the same item to the same storage_point")
+        point_owner.setdefault(point, item_id)
+
+        sequence = entry.get("sequence", 1)
+        sequences = item_sequences.setdefault(item_id, {})
+        if sequence in sequences:
+            errors.append(f"{where}: sequence {sequence} already used for this item at '{sequences[sequence]}'")
+        sequences.setdefault(sequence, point)
     return errors
 
 
@@ -327,6 +379,9 @@ def validate_allocation_file(allocation_file: Path, element_ids: dict[str, set[s
             all_errors += validate_list_items(imported, "putaway-rule.schema.json", "putaway_rules")
         elif name == "owner_zones.yaml":
             all_errors += validate_file(imported, "owner-zones.schema.json")
+        elif name == "fixed_bin_assignments.yaml":
+            all_errors += validate_list_items(imported, "fixed-bin-assignment.schema.json", "fixed_bin_assignments")
+            all_errors += check_fixed_bin_assignments(imported)
         else:
             data = load_yaml(imported)
             if data is None:
@@ -339,6 +394,8 @@ def validate_allocation_file(allocation_file: Path, element_ids: dict[str, set[s
         all_errors += check_putaway_rule_refs(imports["putaway_rules.yaml"], fields_data, element_ids)
         if "owner_zones.yaml" in imports:
             all_errors += check_owner_zones(imports["putaway_rules.yaml"], load_yaml(imports["owner_zones.yaml"]))
+        if "fixed_bin_assignments.yaml" not in imports:
+            all_errors += check_fixed_bin_strategy_needs_assignments(imports["putaway_rules.yaml"])
 
     return all_errors
 

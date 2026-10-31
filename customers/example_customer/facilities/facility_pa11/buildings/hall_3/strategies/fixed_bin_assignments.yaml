@@ -1,0 +1,29 @@
+# Fixed places (pick faces) per item with item-level replenishment
+# thresholds. Validates against schemas/fixed-bin-assignment.schema.json
+# (per entry). storage_point ids are compiled Topology-as-Code ids of
+# hall_3's FIX storage_type; item ids and uom are MasterData-as-Code's.
+#
+# These item-level min/max win over Topology-as-Code's area-level
+# REPL_PICKFACE_A (min 10 / max 50) for the same places.
+
+fixed_bin_assignments:
+  # Fast mover: two fixed places, filled and picked in sequence order.
+  - item_id: "ITEM_001"
+    storage_point: "FIX.FIX-01-01"
+    sequence: 1
+    uom: "each"
+    min_qty: 12
+    max_qty: 48
+    max_pick_qty: 24     # larger demands come as full cases from reserve
+  - item_id: "ITEM_001"
+    storage_point: "FIX.FIX-01-02"
+    sequence: 2
+    uom: "each"
+    min_qty: 6
+    max_qty: 48
+
+  # uom omitted: ITEM_002's default_uom (each) applies.
+  - item_id: "ITEM_002"
+    storage_point: "FIX.FIX-01-03"
+    min_qty: 24
+    max_qty: 96
