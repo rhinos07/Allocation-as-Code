@@ -1,0 +1,26 @@
+# Reusable catalog of ways to choose one free storage place among several
+# within one putaway_rule step. Referenced by
+# strategies/putaway_rules.yaml -> putaway_rule.steps[].placement_strategy.
+# Inbound counterpart of selection_strategies.yaml.
+
+placement_strategies:
+  - id: "NEXT_EMPTY"
+    description: "First empty storage place in the zone's location order. The order is runtime-defined until bin sorting is modeled in Topology-as-Code."
+
+  - id: "ADD_TO_EXISTING"
+    description: "Top up a partly filled place that already holds the same item (and the same lot, if allow_mixed_lots is false) before opening an empty one. Saves space; typical for block storage and pick faces."
+
+  - id: "NEAREST_TO_SOURCE"
+    description: "Free place closest to where the load unit enters the zone (goods-receipt door, identification point). Minimises inbound travel."
+
+  - id: "NEAREST_TO_OUTFEED"
+    description: "Free place closest to the zone's outfeed. Typical for fast movers, to shorten later retrieval."
+
+  - id: "SPREAD_ACROSS_AISLES"
+    description: "Distribute stock of the same item across aisles, so a single aisle or crane failure does not block the item entirely."
+
+  - id: "LOWEST_LEVEL_FIRST"
+    description: "Lowest free rack level first, e.g. for heavy load units or manual access."
+
+  - id: "DELEGATE_TO_CONTROLLER"
+    description: "The WMS chooses only the zone; the zone's controller (e.g. an AutoStore grid, see Topology-as-Code controller_definition) picks the place itself."

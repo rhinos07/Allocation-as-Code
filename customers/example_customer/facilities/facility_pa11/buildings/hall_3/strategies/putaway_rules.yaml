@@ -1,0 +1,57 @@
+# The frequently-changed, customizable inbound part: for a given
+# item/category, the ordered sequence of zones in which to look for a
+# free place, and how to choose a place within each. Inbound counterpart
+# of search_rules.yaml. Validates against schemas/putaway-rule.schema.json
+# (per entry). Zone and load_unit_type ids are Topology-as-Code's
+# customers/example_customer/.../hall_3 ids (see its structure/storage.yaml
+# and elements/load_unit_types.yaml).
+
+putaway_rules:
+  # Default/fallback: applies to any item with no more specific rule
+  # below. At most one putaway_rule per building may omit applies_to -
+  # tools/validate.py checks this.
+  #
+  # Each load unit type finds its own first zone because steps filter by
+  # load_unit_types: AutoStore bins go to the grid, pallets to the shuttle
+  # rack, with block storage as the pallet fallback.
+  - id: "PUTAWAY_DEFAULT"
+    steps:
+      - zone: { type: "storage_type", id: "AUTOSTORE_A" }
+        placement_strategy: "DELEGATE_TO_CONTROLLER"
+        constraints:
+          load_unit_types: ["autostore_bin"]
+      - zone: { type: "storage_type", id: "HBR" }
+        placement_strategy: "SPREAD_ACROSS_AISLES"
+        constraints:
+          load_unit_types: ["pallet_euro", "pallet_industrial"]
+          allow_mixed_items: false
+          max_fill_percent: 90
+      # BLK is homogeneity_required in Topology-as-Code, hence
+      # allow_mixed_items: false.
+      - zone: { type: "storage_type", id: "BLK" }
+        placement_strategy: "ADD_TO_EXISTING"
+        constraints:
+          load_unit_types: ["pallet_euro", "pallet_industrial", "mesh_box"]
+          allow_mixed_items: false
+
+  # ITEM_003 is the FEFO item of SEARCH_ITEM_003_FEFO (search_rules.yaml).
+  # Lot-pure places keep the FEFO search simple: one lot per place, so the
+  # oldest-expiry place is also the oldest-expiry stock.
+  #
+  # Open: ITEM_003 cannot be routed to COLD_ZONE_B by item property,
+  # because MasterData-as-Code has no storage-condition attribute yet.
+  - id: "PUTAWAY_ITEM_003_LOT_PURE"
+    applies_to:
+      item_id: "ITEM_003"
+    steps:
+      - zone: { type: "storage_type", id: "HBR" }
+        placement_strategy: "NEAREST_TO_OUTFEED"
+        constraints:
+          load_unit_types: ["pallet_euro", "pallet_industrial"]
+          allow_mixed_items: false
+          allow_mixed_lots: false
+      - zone: { type: "storage_type", id: "BLK" }
+        placement_strategy: "ADD_TO_EXISTING"
+        constraints:
+          allow_mixed_items: false
+          allow_mixed_lots: false

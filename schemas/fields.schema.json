@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://allocation-as-code.internal/schemas/fields.schema.json",
   "title": "Building Field Configuration",
-  "description": "Restricts which zone types and selection strategies this building's search_rules are allowed to use.",
+  "description": "Restricts which zone types and selection/placement strategies this building's search_rules and putaway_rules are allowed to use.",
   "type": "object",
   "required": ["fields"],
   "properties": {
@@ -21,6 +21,12 @@
           "items": { "type": "string" },
           "minItems": 1,
           "description": "Subset of elements/selection_strategies.yaml ids usable in this building's search_rules."
+        },
+        "allowed_placement_strategies": {
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 1,
+          "description": "Subset of elements/placement_strategies.yaml ids usable in this building's putaway_rules. Optional: a building without putaway_rules does not need it."
         }
       },
       "additionalProperties": false

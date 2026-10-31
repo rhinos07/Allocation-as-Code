@@ -3,8 +3,9 @@
 Allocation-as-Code: declarative, version-controlled description of **how
 a matching stock search is configured for a given item/order demand** -
 which zones to search, in what order, and how to select among matches -
-as YAML, validated via CI. Fills a domain `Warehouse-as-Code`'s Domain
-Map lists as "Not modeled": stock search / allocation strategy.
+and of its inbound counterpart, **where an incoming load unit is put
+away** - as YAML, validated via CI. Fills a domain `Warehouse-as-Code`'s
+Domain Map lists as "Not modeled": stock search / allocation strategy.
 
 ## Related Projects
 
@@ -17,7 +18,7 @@ pattern (JSON Schema validation, `structure/` vs. `strategies/`,
 | [`Topology-as-Code`](https://github.com/rhinos07/Topology-as-Code) | Physical warehouse structure, material-flow communication, movement/replenishment rules |
 | [`OrderOrchestration-as-Code`](https://github.com/rhinos07/OrderOrchestration-as-Code) | How incoming orders are split, and which downstream workflow each split triggers |
 | [`MasterData-as-Code`](https://github.com/rhinos07/MasterData-as-Code) | Item/article master data, packaging/UOM hierarchy, sourcing & lifecycle rules |
-| **Allocation-as-Code** (this repo) | How a matching stock search is configured: search-zone sequence, selection strategy, constraints |
+| **Allocation-as-Code** (this repo) | How a matching stock search is configured (search-zone sequence, selection strategy, constraints) and where incoming stock is put away (putaway-zone sequence, placement strategy, constraints) |
 
 This repo's `search_rule.steps[].zone` references `Topology-as-Code`
 `storage_type`/`activity_area` ids, and `search_rule.applies_to`
@@ -31,11 +32,12 @@ and `allocation.id` are meant to match the same facility/building ids in
 
 | Layer | What | Change Frequency | Who Changes It |
 |---|---|---|---|
-| `elements/` | Reusable catalog (selection strategies) | very rarely | Architect |
+| `elements/` | Reusable catalogs (selection strategies, placement strategies) | very rarely | Architect |
 | `customers/<customer>/company.yaml` | Tenant/organization identity | very rarely (onboarding/offboarding) | Admin |
 | `customers/<customer>/facilities/<facility>/facility.yaml` | Site/plant identity | rarely | Admin/Technician |
-| `.../buildings/<building>/structure/` | Allowed zone types / selection strategies for this building | rarely | Technician, strict review |
+| `.../buildings/<building>/structure/` | Allowed zone types / selection and placement strategies for this building | rarely | Technician, strict review |
 | `.../buildings/<building>/strategies/search_rules.yaml` | The actual search sequence per item/category - **the customizable part** | frequently | Logistics Planner, lenient review |
+| `.../buildings/<building>/strategies/putaway_rules.yaml` | The actual putaway sequence per item/category - inbound counterpart of `search_rules.yaml` | frequently | Logistics Planner, lenient review |
 
 A company can have multiple facilities, and each facility can have
 multiple buildings - **Company → Facility → Building**, the same shape
@@ -67,9 +69,12 @@ allocation-definitions/
 │   ├── allocation.schema.json    # Building-level entry file
 │   ├── fields.schema.json        # Allowed zone types / selection strategies
 │   ├── search-rule.schema.json
-│   └── selection-strategy.schema.json
+│   ├── selection-strategy.schema.json
+│   ├── putaway-rule.schema.json
+│   └── placement-strategy.schema.json
 ├── elements/
-│   └── selection_strategies.yaml # Catalog: FIFO, FEFO, LIFO, NEAREST_TO_TARGET, LOWEST_QUANTITY_FIRST
+│   ├── selection_strategies.yaml # Catalog: FIFO, FEFO, LIFO, NEAREST_TO_TARGET, LOWEST_QUANTITY_FIRST
+│   └── placement_strategies.yaml # Catalog: NEXT_EMPTY, ADD_TO_EXISTING, SPREAD_ACROSS_AISLES, ...
 ├── customers/
 │   └── <customer>/                          # = Company
 │       ├── company.yaml                     # Top level, lists facilities
@@ -80,11 +85,14 @@ allocation-definitions/
 │                   └── <building>/          # = Building
 │                       ├── allocation.yaml         # Imports structure/strategies below
 │                       ├── structure/
-│                       │   └── fields.yaml         # Allowed zone types / selection strategies
+│                       │   └── fields.yaml         # Allowed zone types / selection and placement strategies
 │                       └── strategies/
-│                           └── search_rules.yaml   # Ordered search sequence per item/category
+│                           ├── search_rules.yaml   # Ordered search sequence per item/category
+│                           └── putaway_rules.yaml  # Ordered putaway sequence per item/category
 ├── tools/
 │   └── validate.py           # Validation script (schema + cross-file consistency checks)
+├── tests/
+│   └── test_putaway_rules.py # Unit tests for the putaway validation rules
 ├── docs/
 │   └── entity-glossary.md
 └── .github/workflows/validate.yaml   # CI pipeline (dynamic per-customer matrix)
@@ -119,6 +127,9 @@ pip install -r requirements.txt
 # Validates a company.yaml, facility.yaml, or allocation.yaml - cascades
 # down to every facility/building it references
 python tools/validate.py customers/example_customer/company.yaml
+
+# Unit tests for the validation rules
+python -m unittest discover -s tests -v
 ```
 
 ## Examples
@@ -141,6 +152,16 @@ python tools/validate.py customers/example_customer/company.yaml
     same item id used in `OrderOrchestration-as-Code`'s `WMS-POC`
     inbound scenario): `FEFO` with a 30-day minimum remaining shelf
     life and quality-hold stock excluded, same two zones.
+  - `PUTAWAY_DEFAULT` - the building's fallback putaway rule: AutoStore
+    bins go to `AUTOSTORE_A` (the grid controller picks the place),
+    pallets to `HBR` spread across aisles up to 90 % fill, with `BLK` as
+    the pallet and mesh-box fallback. Steps filter by
+    `load_unit_types`, so the step order also ranks which zone each load
+    unit type prefers.
+  - `PUTAWAY_ITEM_003_LOT_PURE` - lot-pure places for the FEFO item
+    `ITEM_003`, so the FEFO search finds one lot per place. Open:
+    `ITEM_003` cannot be routed to `COLD_ZONE_B` by item property, because
+    `MasterData-as-Code` has no storage-condition attribute yet.
 
 ## Core Concepts (Quick Reference)
 
@@ -151,6 +172,13 @@ python tools/validate.py customers/example_customer/company.yaml
   within a `search_rule`, tried in order.
 - **selection_strategy** — how to pick among multiple matches within one
   step's zone (`FIFO`/`FEFO`/`LIFO`/`NEAREST_TO_TARGET`/`LOWEST_QUANTITY_FIRST`).
+- **putaway_rule** — the inbound counterpart of `search_rule`: the
+  ordered zone sequence in which to look for a free place, per
+  `applies_to` scope, same precedence rules.
+- **placement_strategy** — how to choose one free place within one
+  putaway step's zone (`NEXT_EMPTY`/`ADD_TO_EXISTING`/`NEAREST_TO_SOURCE`/
+  `NEAREST_TO_OUTFEED`/`SPREAD_ACROSS_AISLES`/`LOWEST_LEVEL_FIRST`/
+  `DELEGATE_TO_CONTROLLER`).
 
 Full glossary: [`docs/entity-glossary.md`](docs/entity-glossary.md)
 
@@ -166,6 +194,15 @@ Full glossary: [`docs/entity-glossary.md`](docs/entity-glossary.md)
       equal specificity naming the same scope (see `docs/entity-glossary.md`
       "Applies-To Precedence") - not yet a problem with only two example
       rules, deliberately not designed prematurely.
+- [ ] Cross-check `putaway_rule.steps[].constraints.load_unit_types`
+      against `Topology-as-Code` `load_unit_type` ids and the zone's
+      `allowed_load_unit_types`, and `allow_mixed_items: true` against the
+      zone's `homogeneity_required` - not done, same cross-repo gap as
+      zone ids.
+- [ ] Route items to zones by storage condition (e.g. temperature) once
+      `MasterData-as-Code` has such an attribute.
+- [ ] Add a `FIXED_BIN_FIRST` placement strategy once fixed item-to-place
+      assignments are modeled.
 - [ ] Consider whether `search_rule` needs an explicit `order_type`/
       `channel` scope (mirroring `OrderOrchestration-as-Code`) in
       addition to item/category - not yet needed by any real scenario.
@@ -173,8 +210,8 @@ Full glossary: [`docs/entity-glossary.md`](docs/entity-glossary.md)
 ### Out of Scope (By Design)
 
 - **Runtime state**: actual live on-hand quantities, reservations, which
-  storage_point/batch a search actually resolved to - that's the WMS
-  runtime database, not here.
+  storage_point/batch a search actually resolved to, which free place a
+  putaway actually booked - that's the WMS runtime database, not here.
 - **Item/article master data**: that's `MasterData-as-Code`.
 - **Warehouse structure**: zone/storage_type definitions themselves -
   that's `Topology-as-Code`. This repo only references zone ids by
