@@ -29,6 +29,7 @@ ELEMENTS_DIR = REPO_ROOT / "elements"
 
 ELEMENT_CATALOGS = {
     "selection_strategies.yaml": ("selection-strategy.schema.json", "selection_strategies"),
+    "placement_strategies.yaml": ("placement-strategy.schema.json", "placement_strategies"),
 }
 
 
@@ -175,6 +176,78 @@ def check_search_rule_refs(path: Path, fields_data: dict | None, element_ids: di
     return errors
 
 
+def check_putaway_rule_refs(path: Path, fields_data: dict | None, element_ids: dict[str, set[str]]) -> list[str]:
+    """Checks putaway_rules.yaml the same way check_search_rule_refs checks
+    search_rules.yaml: steps[].zone.type against allowed_zone_types,
+    steps[].placement_strategy against elements/placement_strategies.yaml
+    and allowed_placement_strategies, and at most one default rule (no
+    applies_to). Also flags a step that repeats an earlier step's zone
+    for the same load unit types and the same other constraints: every
+    placement strategy finds a free place if the zone has one, so the
+    later step could never be reached. A repeat with different
+    constraints (e.g. a higher max_fill_percent as a late fallback) is
+    legitimate and not flagged."""
+    errors: list[str] = []
+    data = load_yaml(path)
+    if not data:
+        return errors
+
+    fields = (fields_data or {}).get("fields", {})
+    allowed_zone_types = set(fields.get("allowed_zone_types", []))
+    allowed_strategies = set(fields.get("allowed_placement_strategies", []))
+    strategy_ids = element_ids.get("placement_strategies", set())
+
+    default_rule_ids = []
+    for rule in data.get("putaway_rules", []):
+        rule_id = rule.get("id", "?")
+        if not rule.get("applies_to"):
+            default_rule_ids.append(rule_id)
+
+        seen: list[tuple[tuple[str, str], frozenset[str] | None, dict, int]] = []
+        for i, step in enumerate(rule.get("steps", [])):
+            zone = step.get("zone", {})
+            zone_type = zone.get("type")
+            if zone_type and allowed_zone_types and zone_type not in allowed_zone_types:
+                errors.append(
+                    f"{path}: putaway_rule '{rule_id}' steps[{i}]: zone.type '{zone_type}' not in structure/fields.yaml allowed_zone_types"
+                )
+
+            strategy = step.get("placement_strategy")
+            if strategy and strategy_ids and strategy not in strategy_ids:
+                errors.append(
+                    f"{path}: putaway_rule '{rule_id}' steps[{i}]: placement_strategy '{strategy}' not found in elements/placement_strategies.yaml"
+                )
+            if strategy and allowed_strategies and strategy not in allowed_strategies:
+                errors.append(
+                    f"{path}: putaway_rule '{rule_id}' steps[{i}]: placement_strategy '{strategy}' not in structure/fields.yaml allowed_placement_strategies"
+                )
+
+            # None = no load_unit_types filter = applies to every type.
+            constraints = dict(step.get("constraints", {}))
+            types = constraints.pop("load_unit_types", None)
+            types_set = frozenset(types) if types else None
+            zone_key = (zone_type or "", zone.get("id") or "")
+            for earlier_key, earlier_types, earlier_rest, earlier_index in seen:
+                if earlier_key != zone_key or earlier_rest != constraints:
+                    continue
+                covered = earlier_types is None or (
+                    types_set is not None and types_set <= earlier_types
+                )
+                if covered:
+                    errors.append(
+                        f"{path}: putaway_rule '{rule_id}' steps[{i}]: zone '{zone_key[1]}' already covered by steps[{earlier_index}] for the same load unit types and constraints - this step is unreachable"
+                    )
+                    break
+            seen.append((zone_key, types_set, constraints, i))
+
+    if len(default_rule_ids) > 1:
+        errors.append(
+            f"{path}: multiple putaway_rules omit applies_to (ambiguous default): {default_rule_ids}"
+        )
+
+    return errors
+
+
 def validate_allocation_file(allocation_file: Path, element_ids: dict[str, set[str]] = {}) -> list[str]:
     """Validates a single building-level allocation.yaml and everything it imports."""
     if not allocation_file.exists():
@@ -194,6 +267,8 @@ def validate_allocation_file(allocation_file: Path, element_ids: dict[str, set[s
             all_errors += validate_file(imported, "fields.schema.json")
         elif name == "search_rules.yaml":
             all_errors += validate_list_items(imported, "search-rule.schema.json", "search_rules")
+        elif name == "putaway_rules.yaml":
+            all_errors += validate_list_items(imported, "putaway-rule.schema.json", "putaway_rules")
         else:
             data = load_yaml(imported)
             if data is None:
@@ -202,6 +277,8 @@ def validate_allocation_file(allocation_file: Path, element_ids: dict[str, set[s
     fields_data = load_yaml(imports["fields.yaml"]) if "fields.yaml" in imports else {}
     if "search_rules.yaml" in imports:
         all_errors += check_search_rule_refs(imports["search_rules.yaml"], fields_data, element_ids)
+    if "putaway_rules.yaml" in imports:
+        all_errors += check_putaway_rule_refs(imports["putaway_rules.yaml"], fields_data, element_ids)
 
     return all_errors
 

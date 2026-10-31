@@ -6,8 +6,9 @@ api_version: "allocation-as-code/v1"
 
 allocation:
   id: "hall_3"
-  name: "Hall 3 Stock Search"
+  name: "Hall 3 Stock Search and Putaway"
 
   imports:
     - "structure/fields.yaml"
     - "strategies/search_rules.yaml"
+    - "strategies/putaway_rules.yaml"

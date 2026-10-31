@@ -1,0 +1,17 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://allocation-as-code.internal/schemas/placement-strategy.schema.json",
+  "title": "Placement Strategy",
+  "description": "Catalog entry describing a rule for choosing one free storage place among several within one putaway_rule step. Referenced by putaway_rule.steps[].placement_strategy.",
+  "type": "object",
+  "required": ["id"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Z0-9_]+$",
+      "description": "Unique ID, e.g. 'ADD_TO_EXISTING'"
+    },
+    "description": { "type": "string" }
+  },
+  "additionalProperties": true
+}

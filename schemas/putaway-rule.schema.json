@@ -1,0 +1,81 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://allocation-as-code.internal/schemas/putaway-rule.schema.json",
+  "title": "Putaway Rule",
+  "description": "Defines the ordered sequence of zones in which to look for a free storage place for an incoming load unit, and how to choose a place within each zone, for a given item/category scope. Inbound counterpart of search_rule. Does not itself reserve or book any storage_point - see README 'What this repo is not'.",
+  "type": "object",
+  "required": ["id", "steps"],
+  "properties": {
+    "id": { "type": "string" },
+    "description": { "type": "string" },
+    "applies_to": {
+      "type": "object",
+      "properties": {
+        "category": {
+          "type": "string",
+          "description": "References an id in MasterData-as-Code."
+        },
+        "item_id": {
+          "type": "string",
+          "description": "References an id in MasterData-as-Code. More specific than category - takes precedence when both a category-scoped and an item-scoped rule could match the same item. Same precedence as search_rule.applies_to."
+        }
+      },
+      "additionalProperties": false,
+      "minProperties": 1,
+      "description": "Scopes this rule to a category or a specific item. Omit entirely for this building's default/fallback putaway rule - at most one putaway_rule per building may omit applies_to, see tools/validate.py."
+    },
+    "steps": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Ordered zone sequence: step 1 is tried first, later steps are fallbacks only consulted if earlier steps have no suitable free place. A step that names load_unit_types is skipped for any other load unit type - the step order therefore also ranks which zones a load unit type prefers (OpenWMS TypePlacingRule.privilege_level).",
+      "items": {
+        "type": "object",
+        "required": ["zone", "placement_strategy"],
+        "properties": {
+          "zone": {
+            "type": "object",
+            "required": ["type", "id"],
+            "properties": {
+              "type": { "type": "string", "enum": ["storage_type", "activity_area"] },
+              "id": { "type": "string", "description": "A Topology-as-Code storage_type/activity_area id." }
+            },
+            "additionalProperties": false
+          },
+          "placement_strategy": {
+            "type": "string",
+            "description": "References an id in elements/placement_strategies.yaml."
+          },
+          "constraints": {
+            "type": "object",
+            "properties": {
+              "load_unit_types": {
+                "type": "array",
+                "items": { "type": "string" },
+                "minItems": 1,
+                "uniqueItems": true,
+                "description": "Topology-as-Code load_unit_type ids this step applies to. Omitted = every load unit type the zone itself allows."
+              },
+              "allow_mixed_items": {
+                "type": "boolean",
+                "description": "Whether a storage place may hold stock of more than one item. Must not contradict the zone's Topology-as-Code homogeneity_required (cross-repo check not yet implemented)."
+              },
+              "allow_mixed_lots": {
+                "type": "boolean",
+                "description": "Whether a storage place may hold more than one lot of the same item. Only meaningful for lot-managed items."
+              },
+              "max_fill_percent": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100,
+                "description": "Stop placing into this zone once its occupancy reaches this share, keeping capacity in reserve (OpenWMS LocationGroup max fill level)."
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

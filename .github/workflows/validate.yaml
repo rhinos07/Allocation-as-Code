@@ -9,6 +9,7 @@ on:
       - "elements/**"
       - "schemas/**"
       - "tools/**"
+      - "tests/**"
       - ".github/workflows/validate.yaml"
   push:
     branches: [main]
@@ -48,3 +49,17 @@ jobs:
 
       - name: Validate (schema conformance + cross-file consistency)
         run: python tools/validate.py customers/${{ matrix.customer }}/company.yaml
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install -r requirements.txt
+
+      - name: Unit tests (validation rules)
+        run: python -m unittest discover -s tests -v
