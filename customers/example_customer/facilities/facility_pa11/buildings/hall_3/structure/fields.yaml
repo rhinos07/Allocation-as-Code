@@ -13,5 +13,6 @@ fields:
   allowed_placement_strategies:
     - "ADD_TO_EXISTING"
     - "DELEGATE_TO_CONTROLLER"
+    - "FIXED_BIN_FIRST"
     - "NEAREST_TO_OUTFEED"
     - "SPREAD_ACROSS_AISLES"

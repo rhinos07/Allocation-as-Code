@@ -73,10 +73,11 @@ allocation-definitions/
 │   ├── putaway-rule.schema.json
 │   ├── placement-strategy.schema.json
 │   ├── applies-to.schema.json    # Shared rule scope: item / owner / category
-│   └── owner-zones.schema.json   # Zones reserved for stock owners
+│   ├── owner-zones.schema.json   # Zones reserved for stock owners
+│   └── fixed-bin-assignment.schema.json # Item -> fixed place with min/max
 ├── elements/
 │   ├── selection_strategies.yaml # Catalog: FIFO, FEFO, LIFO, NEAREST_TO_TARGET, LOWEST_QUANTITY_FIRST
-│   └── placement_strategies.yaml # Catalog: NEXT_EMPTY, ADD_TO_EXISTING, SPREAD_ACROSS_AISLES, ...
+│   └── placement_strategies.yaml # Catalog: NEXT_EMPTY, ADD_TO_EXISTING, FIXED_BIN_FIRST, ...
 ├── customers/
 │   └── <customer>/                          # = Company
 │       ├── company.yaml                     # Top level, lists facilities
@@ -91,13 +92,15 @@ allocation-definitions/
 │                       │   └── owner_zones.yaml    # Optional: zones reserved for stock owners
 │                       └── strategies/
 │                           ├── search_rules.yaml   # Ordered search sequence per item/category
-│                           └── putaway_rules.yaml  # Ordered putaway sequence per item/category
+│                           ├── putaway_rules.yaml  # Ordered putaway sequence per item/category
+│                           └── fixed_bin_assignments.yaml # Optional: item -> fixed place, min/max
 ├── tools/
 │   ├── validate.py           # Validation script (schema + cross-file consistency checks)
 │   └── precedence.py         # Reference implementation of applies_to precedence
 ├── tests/
 │   ├── test_putaway_rules.py # Unit tests for the putaway validation rules
-│   └── test_owner_scopes.py  # Unit tests for owner scopes, precedence and owner zones
+│   ├── test_owner_scopes.py  # Unit tests for owner scopes, precedence and owner zones
+│   └── test_fixed_bins.py    # Unit tests for fixed bin assignments
 ├── docs/
 │   └── entity-glossary.md
 └── .github/workflows/validate.yaml   # CI pipeline (dynamic per-customer matrix)
@@ -157,8 +160,9 @@ python -m unittest discover -s tests -v
     same item id used in `OrderOrchestration-as-Code`'s `WMS-POC`
     inbound scenario): `FEFO` with a 30-day minimum remaining shelf
     life and quality-hold stock excluded, same two zones.
-  - `PUTAWAY_DEFAULT` - the building's fallback putaway rule: AutoStore
-    bins go to `AUTOSTORE_A` (the grid controller picks the place),
+  - `PUTAWAY_DEFAULT` - the building's fallback putaway rule: cartons
+    first top up their item's fixed places in `FIX` (`FIXED_BIN_FIRST`),
+    AutoStore bins go to `AUTOSTORE_A` (the grid controller picks the place),
     pallets to `HBR` spread across aisles up to 90 % fill, with `BLK` as
     the pallet and mesh-box fallback. Steps filter by
     `load_unit_types`, so the step order also ranks which zone each load
@@ -167,6 +171,10 @@ python -m unittest discover -s tests -v
     `ITEM_003`, so the FEFO search finds one lot per place. Open:
     `ITEM_003` cannot be routed to `COLD_ZONE_B` by item property, because
     `MasterData-as-Code` has no storage-condition attribute yet.
+  - `fixed_bin_assignments.yaml` - `ITEM_001` on two fixed places in
+    `FIX` (sequence 1 and 2, max 24 per pick), `ITEM_002` on one. These
+    item-level min/max win over `Topology-as-Code`'s area-level
+    `REPL_PICKFACE_A` for the same places.
 
 ## Core Concepts (Quick Reference)
 
@@ -188,7 +196,12 @@ python -m unittest discover -s tests -v
 - **placement_strategy** — how to choose one free place within one
   putaway step's zone (`NEXT_EMPTY`/`ADD_TO_EXISTING`/`NEAREST_TO_SOURCE`/
   `NEAREST_TO_OUTFEED`/`SPREAD_ACROSS_AISLES`/`LOWEST_LEVEL_FIRST`/
-  `DELEGATE_TO_CONTROLLER`).
+  `DELEGATE_TO_CONTROLLER`/`FIXED_BIN_FIRST`).
+- **fixed_bin_assignment** — an item fixed to one storage place (pick
+  face) with item-level `min_qty`/`max_qty`/`max_pick_qty` and a
+  `sequence` among several places of the same item. A place is fixed to
+  at most one item. Item-level values win over an area-level
+  `Topology-as-Code` `replenishment_strategy`.
 
 Full glossary: [`docs/entity-glossary.md`](docs/entity-glossary.md)
 
@@ -215,8 +228,13 @@ Full glossary: [`docs/entity-glossary.md`](docs/entity-glossary.md)
       zone ids.
 - [ ] Route items to zones by storage condition (e.g. temperature) once
       `MasterData-as-Code` has such an attribute.
-- [ ] Add a `FIXED_BIN_FIRST` placement strategy once fixed item-to-place
-      assignments are modeled.
+- [x] ~~Add a `FIXED_BIN_FIRST` placement strategy once fixed
+      item-to-place assignments are modeled~~ - done with
+      `strategies/fixed_bin_assignments.yaml`.
+- [ ] Cross-check `fixed_bin_assignments` against `Topology-as-Code`
+      (storage_point exists, its storage_type allows the item's load unit)
+      and `MasterData-as-Code` (item and uom exist; the place's zone is
+      not reserved for another owner) - cross-repo, not done here.
 - [ ] Consider whether `search_rule` needs an explicit `order_type`/
       `channel` scope (mirroring `OrderOrchestration-as-Code`) in
       addition to item/category - not yet needed by any real scenario.

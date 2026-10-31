@@ -1,0 +1,44 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://allocation-as-code.internal/schemas/fixed-bin-assignment.schema.json",
+  "title": "Fixed Bin Assignment",
+  "description": "Assigns an item to one fixed storage place (pick face) with its own replenishment thresholds (myWMS FixAssignment). The item-level min/max here wins over an area-level Topology-as-Code replenishment_strategy min/max for the same place. Does not reserve or book anything at runtime.",
+  "type": "object",
+  "required": ["item_id", "storage_point", "min_qty", "max_qty"],
+  "properties": {
+    "item_id": {
+      "type": "string",
+      "description": "References an item id in MasterData-as-Code. The item's owner (if any) follows from MasterData."
+    },
+    "storage_point": {
+      "type": "string",
+      "description": "A compiled Topology-as-Code storage_point id, e.g. 'FIX.FIX-01-01'. A storage point is fixed to at most one item."
+    },
+    "sequence": {
+      "type": "integer",
+      "minimum": 1,
+      "default": 1,
+      "description": "Order among several fixed places of the same item: 1 is filled and picked first. Unique per item."
+    },
+    "uom": {
+      "type": "string",
+      "description": "Unit of min_qty/max_qty/max_pick_qty, a MasterData-as-Code uom id. Omit to use the item's default_uom."
+    },
+    "min_qty": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Replenishment is triggered when the place falls below this quantity."
+    },
+    "max_qty": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "description": "Replenishment fills the place up to this quantity."
+    },
+    "max_pick_qty": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "description": "Largest quantity picked from this place in one pick; larger demands go to other stock (e.g. full cases from reserve). Optional."
+    }
+  },
+  "additionalProperties": false
+}
