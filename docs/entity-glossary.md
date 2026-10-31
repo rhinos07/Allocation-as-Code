@@ -32,16 +32,42 @@ three levels and cascades validation downward automatically.
 
 ## Applies-To Precedence
 
-When multiple `search_rule`s could match the same item, the most
-specific one wins: an `applies_to.item_id` rule beats an
-`applies_to.category` rule for that item, which beats the building's
-default (`applies_to` omitted) rule. This repo does not model what
-happens if two rules with the *same* specificity both match (e.g. two
-different `item_id` rules naming the same id) - `tools/validate.py`
-does not currently check for that duplicate-scope case.
+`search_rule` and `putaway_rule` share one scope definition
+(`schemas/applies-to.schema.json`). Allowed combinations, most specific
+first - the most specific matching rule wins:
 
-`putaway_rule`s follow the same precedence, with the same open
-duplicate-scope case.
+| Rank | `applies_to` | Matches |
+|---|---|---|
+| 5 | `item_id` | that one item |
+| 4 | `owner` + `category` | items of that category belonging to that owner |
+| 3 | `owner` | all items of that owner |
+| 2 | `category` | all items of that category, any owner |
+| 1 | omitted | default for the building |
+
+`item_id` stands alone: an item already has exactly one owner and one
+category (`MasterData-as-Code`). Because of that, two different scopes
+of the same rank never match the same item, so the only possible tie is
+two rules with an identical scope - `tools/validate.py` rejects that
+(`check_rule_scopes`), separately for search and putaway rules.
+`tools/precedence.py` is the reference implementation of the selection a
+runtime must make (`select_rule`), pinned by `tests/test_owner_scopes.py`.
+
+`owner` scopes only make sense in multi-owner warehouses, where
+`MasterData-as-Code` `company.yaml` declares owners. Whether an
+`applies_to.owner` or `.category` id exists there is a cross-repo check,
+not done here (Warehouse-as-Code backlog C1).
+
+## Stock Owners
+
+| Term | Meaning |
+|---|---|
+| `applies_to.owner` | Scopes a rule to one stock owner, alone or with `category`. See the precedence table above. |
+| `allow_mixed_owners` | Putaway step constraint: whether one storage place may hold stock of more than one owner (myWMS `mixClient`). |
+| `owner_zones` | Optional `structure/owner_zones.yaml`: zones reserved for given owners (myWMS `onlyClientLocation`). A putaway step into a reserved zone needs a rule whose `applies_to.owner` is one of the zone's owners; a rule without owner (default or category-only) is rejected. Rules scoped by `item_id` are not checked here, because the item's owner lives in `MasterData-as-Code`. Zones not listed are open to every owner. |
+
+That stock of one owner is never allocated to another owner's demand is a
+runtime invariant of the WMS, not configuration - there is nothing to
+configure for it here.
 
 ## What This Repo Is Not
 

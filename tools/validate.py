@@ -23,6 +23,9 @@ from jsonschema import Draft7Validator
 from referencing import Registry, Resource
 from referencing.jsonschema import DRAFT7
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from precedence import scope_key  # noqa: E402
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCHEMA_DIR = REPO_ROOT / "schemas"
 ELEMENTS_DIR = REPO_ROOT / "elements"
@@ -131,11 +134,77 @@ def validate_element_catalog(path: Path, schema_name: str, list_key: str) -> lis
     return errors
 
 
+def check_rule_scopes(path: Path, rules: list[dict], kind: str) -> list[str]:
+    """Rejects two rules of the same kind with the same applies_to scope.
+    With precedence item_id > owner + category > owner > category >
+    default (tools/precedence.py) and every item having exactly one id,
+    owner and category, identical scopes are the only way two rules can
+    tie for the same item. The default rule (no applies_to) is the
+    empty scope, so this also covers "at most one default"."""
+    errors: list[str] = []
+    seen: dict[tuple, str] = {}
+    for rule in rules:
+        rule_id = rule.get("id", "?")
+        key = scope_key(rule.get("applies_to"))
+        if key in seen:
+            if key:
+                scope = ", ".join(f"{k}={v}" for k, v in key)
+                errors.append(
+                    f"{path}: {kind}s '{seen[key]}' and '{rule_id}' have the same applies_to scope ({scope}) - ambiguous"
+                )
+            else:
+                errors.append(
+                    f"{path}: {kind}s '{seen[key]}' and '{rule_id}' both omit applies_to (ambiguous default)"
+                )
+        else:
+            seen[key] = rule_id
+    return errors
+
+
+def check_owner_zones(path: Path, owner_zones_data: dict | None) -> list[str]:
+    """Checks putaway_rules.yaml against structure/owner_zones.yaml: a
+    step into a reserved zone needs a rule whose applies_to.owner is one
+    of the zone's owners. A rule scoped by item_id alone cannot be
+    checked here - the item's owner lives in MasterData-as-Code
+    (cross-repo, see Warehouse-as-Code backlog C1a)."""
+    errors: list[str] = []
+    data = load_yaml(path)
+    if not data or not owner_zones_data:
+        return errors
+
+    reserved: dict[tuple[str, str], set[str]] = {}
+    for entry in owner_zones_data.get("owner_zones", []):
+        zone = entry.get("zone", {})
+        key = (zone.get("type", ""), zone.get("id", ""))
+        reserved.setdefault(key, set()).update(entry.get("owners", []))
+
+    for rule in data.get("putaway_rules", []):
+        rule_id = rule.get("id", "?")
+        applies_to = rule.get("applies_to") or {}
+        if "item_id" in applies_to:
+            continue
+        owner = applies_to.get("owner")
+        for i, step in enumerate(rule.get("steps", [])):
+            zone = step.get("zone", {})
+            owners = reserved.get((zone.get("type", ""), zone.get("id", "")))
+            if owners is None:
+                continue
+            if owner is None:
+                errors.append(
+                    f"{path}: putaway_rule '{rule_id}' steps[{i}]: zone '{zone.get('id')}' is reserved for owners {sorted(owners)} but the rule has no applies_to.owner"
+                )
+            elif owner not in owners:
+                errors.append(
+                    f"{path}: putaway_rule '{rule_id}' steps[{i}]: zone '{zone.get('id')}' is reserved for owners {sorted(owners)}, not '{owner}'"
+                )
+    return errors
+
+
 def check_search_rule_refs(path: Path, fields_data: dict | None, element_ids: dict[str, set[str]]) -> list[str]:
     """Checks search_rules.yaml's steps[].zone.type and .selection_strategy
     against structure/fields.yaml's allow-lists and
-    elements/selection_strategies.yaml ids. Also checks that at most one
-    search_rule per building omits applies_to (the default/fallback rule)."""
+    elements/selection_strategies.yaml ids, and that no two search_rules
+    share an applies_to scope (check_rule_scopes)."""
     errors: list[str] = []
     data = load_yaml(path)
     if not data:
@@ -145,11 +214,9 @@ def check_search_rule_refs(path: Path, fields_data: dict | None, element_ids: di
     allowed_strategies = set((fields_data or {}).get("fields", {}).get("allowed_selection_strategies", []))
     strategy_ids = element_ids.get("selection_strategies", set())
 
-    default_rule_ids = []
+    errors += check_rule_scopes(path, data.get("search_rules", []), "search_rule")
     for rule in data.get("search_rules", []):
         rule_id = rule.get("id", "?")
-        if not rule.get("applies_to"):
-            default_rule_ids.append(rule_id)
 
         for i, step in enumerate(rule.get("steps", [])):
             zone_type = step.get("zone", {}).get("type")
@@ -168,11 +235,6 @@ def check_search_rule_refs(path: Path, fields_data: dict | None, element_ids: di
                     f"{path}: search_rule '{rule_id}' steps[{i}]: selection_strategy '{strategy}' not in structure/fields.yaml allowed_selection_strategies"
                 )
 
-    if len(default_rule_ids) > 1:
-        errors.append(
-            f"{path}: multiple search_rules omit applies_to (ambiguous default): {default_rule_ids}"
-        )
-
     return errors
 
 
@@ -180,9 +242,10 @@ def check_putaway_rule_refs(path: Path, fields_data: dict | None, element_ids: d
     """Checks putaway_rules.yaml the same way check_search_rule_refs checks
     search_rules.yaml: steps[].zone.type against allowed_zone_types,
     steps[].placement_strategy against elements/placement_strategies.yaml
-    and allowed_placement_strategies, and at most one default rule (no
-    applies_to). Also flags a step that repeats an earlier step's zone
-    for the same load unit types and the same other constraints: every
+    and allowed_placement_strategies, and no two rules with the same
+    applies_to scope (check_rule_scopes). Also flags a step that repeats
+    an earlier step's zone for the same load unit types and the same
+    other constraints: every
     placement strategy finds a free place if the zone has one, so the
     later step could never be reached. A repeat with different
     constraints (e.g. a higher max_fill_percent as a late fallback) is
@@ -197,11 +260,9 @@ def check_putaway_rule_refs(path: Path, fields_data: dict | None, element_ids: d
     allowed_strategies = set(fields.get("allowed_placement_strategies", []))
     strategy_ids = element_ids.get("placement_strategies", set())
 
-    default_rule_ids = []
+    errors += check_rule_scopes(path, data.get("putaway_rules", []), "putaway_rule")
     for rule in data.get("putaway_rules", []):
         rule_id = rule.get("id", "?")
-        if not rule.get("applies_to"):
-            default_rule_ids.append(rule_id)
 
         seen: list[tuple[tuple[str, str], frozenset[str] | None, dict, int]] = []
         for i, step in enumerate(rule.get("steps", [])):
@@ -240,11 +301,6 @@ def check_putaway_rule_refs(path: Path, fields_data: dict | None, element_ids: d
                     break
             seen.append((zone_key, types_set, constraints, i))
 
-    if len(default_rule_ids) > 1:
-        errors.append(
-            f"{path}: multiple putaway_rules omit applies_to (ambiguous default): {default_rule_ids}"
-        )
-
     return errors
 
 
@@ -269,6 +325,8 @@ def validate_allocation_file(allocation_file: Path, element_ids: dict[str, set[s
             all_errors += validate_list_items(imported, "search-rule.schema.json", "search_rules")
         elif name == "putaway_rules.yaml":
             all_errors += validate_list_items(imported, "putaway-rule.schema.json", "putaway_rules")
+        elif name == "owner_zones.yaml":
+            all_errors += validate_file(imported, "owner-zones.schema.json")
         else:
             data = load_yaml(imported)
             if data is None:
@@ -279,6 +337,8 @@ def validate_allocation_file(allocation_file: Path, element_ids: dict[str, set[s
         all_errors += check_search_rule_refs(imports["search_rules.yaml"], fields_data, element_ids)
     if "putaway_rules.yaml" in imports:
         all_errors += check_putaway_rule_refs(imports["putaway_rules.yaml"], fields_data, element_ids)
+        if "owner_zones.yaml" in imports:
+            all_errors += check_owner_zones(imports["putaway_rules.yaml"], load_yaml(imports["owner_zones.yaml"]))
 
     return all_errors
 
