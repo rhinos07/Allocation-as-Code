@@ -252,6 +252,36 @@ def check_fixed_bin_assignments(path: Path) -> list[str]:
     return errors
 
 
+def check_area_assignments(path: Path, fields_data: dict | None) -> list[str]:
+    """Checks strategies/area_assignments.yaml: min_qty <= planned_qty <=
+    max_qty, one entry per item and zone, and the zone type allowed by
+    structure/fields.yaml. Whether item_id and zone exist in MasterData-/
+    Topology-as-Code is a cross-repo check (Warehouse-as-Code backlog C1a)."""
+    errors: list[str] = []
+    data = load_yaml(path)
+    if not data:
+        return errors
+    allowed_types = set((fields_data or {}).get("fields", {}).get("allowed_zone_types", []) or [])
+    seen: set[tuple] = set()
+    for i, entry in enumerate(data.get("area_assignments", [])):
+        item_id = entry.get("item_id", "?")
+        zone = entry.get("zone") or {}
+        key = (item_id, zone.get("type"), zone.get("id"))
+        where = f"{path}: area_assignments[{i}] ({item_id} @ {zone.get('type')}:{zone.get('id')})"
+        min_qty, max_qty, planned = entry.get("min_qty"), entry.get("max_qty"), entry.get("planned_qty")
+        numbers = all(isinstance(v, (int, float)) for v in (min_qty, max_qty))
+        if numbers and min_qty > max_qty:
+            errors.append(f"{where}: min_qty ({min_qty}) exceeds max_qty ({max_qty})")
+        if numbers and isinstance(planned, (int, float)) and not (min_qty <= planned <= max_qty):
+            errors.append(f"{where}: planned_qty ({planned}) is outside min_qty..max_qty ({min_qty}..{max_qty})")
+        if key in seen:
+            errors.append(f"{where}: item already has an area assignment for this zone")
+        seen.add(key)
+        if allowed_types and zone.get("type") not in allowed_types:
+            errors.append(f"{where}: zone type '{zone.get('type')}' is not in fields.yaml allowed_zone_types")
+    return errors
+
+
 def check_search_rule_refs(path: Path, fields_data: dict | None, element_ids: dict[str, set[str]]) -> list[str]:
     """Checks search_rules.yaml's steps[].zone.type and .selection_strategy
     against structure/fields.yaml's allow-lists and
@@ -382,6 +412,8 @@ def validate_allocation_file(allocation_file: Path, element_ids: dict[str, set[s
         elif name == "fixed_bin_assignments.yaml":
             all_errors += validate_list_items(imported, "fixed-bin-assignment.schema.json", "fixed_bin_assignments")
             all_errors += check_fixed_bin_assignments(imported)
+        elif name == "area_assignments.yaml":
+            all_errors += validate_list_items(imported, "area-assignment.schema.json", "area_assignments")
         else:
             data = load_yaml(imported)
             if data is None:
@@ -390,6 +422,8 @@ def validate_allocation_file(allocation_file: Path, element_ids: dict[str, set[s
     fields_data = load_yaml(imports["fields.yaml"]) if "fields.yaml" in imports else {}
     if "search_rules.yaml" in imports:
         all_errors += check_search_rule_refs(imports["search_rules.yaml"], fields_data, element_ids)
+    if "area_assignments.yaml" in imports:
+        all_errors += check_area_assignments(imports["area_assignments.yaml"], fields_data)
     if "putaway_rules.yaml" in imports:
         all_errors += check_putaway_rule_refs(imports["putaway_rules.yaml"], fields_data, element_ids)
         if "owner_zones.yaml" in imports:

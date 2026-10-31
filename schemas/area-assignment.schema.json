@@ -1,0 +1,43 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://allocation-as-code.internal/schemas/area-assignment.schema.json",
+  "title": "Area Assignment",
+  "description": "Item-level stock targets for one zone without fixed places (myWMS ItemDataArea): how much of the item the zone should hold, regardless of which storage points it is on. Typically the result of a slotting or ABC analysis, written by a script; this repo does not compute it. The item-level min/max here wins over an area-level Topology-as-Code replenishment_strategy min/max for the same zone. Inside the zone, a fixed_bin_assignment of the same item governs its fixed places. Does not reserve or book anything at runtime.",
+  "type": "object",
+  "required": ["item_id", "zone", "min_qty", "max_qty"],
+  "properties": {
+    "item_id": {
+      "type": "string",
+      "description": "References an item id in MasterData-as-Code."
+    },
+    "zone": {
+      "type": "object",
+      "required": ["type", "id"],
+      "properties": {
+        "type": { "type": "string", "enum": ["storage_type", "activity_area"] },
+        "id": { "type": "string", "description": "A Topology-as-Code storage_type/activity_area id." }
+      },
+      "additionalProperties": false
+    },
+    "uom": {
+      "type": "string",
+      "description": "Unit of the quantities, a MasterData-as-Code uom id. Omit to use the item's default_uom."
+    },
+    "min_qty": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Replenishment into the zone is triggered when the item's total quantity in it falls below this."
+    },
+    "max_qty": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "description": "Replenishment fills the zone up to this quantity of the item; putaway into the zone stops above it."
+    },
+    "planned_qty": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "description": "Optional planned (target) quantity between min_qty and max_qty, e.g. from the slotting analysis."
+    }
+  },
+  "additionalProperties": false
+}
