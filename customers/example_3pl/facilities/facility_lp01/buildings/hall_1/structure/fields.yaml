@@ -1,0 +1,13 @@
+# Allowed zone types and strategies for this building.
+# Validates against schemas/fields.schema.json
+
+fields:
+  allowed_zone_types:
+    - "activity_area"
+    - "storage_type"
+  allowed_selection_strategies:
+    - "FEFO"
+    - "FIFO"
+  allowed_placement_strategies:
+    - "FIXED_BIN_FIRST"
+    - "NEXT_EMPTY"

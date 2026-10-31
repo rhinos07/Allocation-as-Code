@@ -1,0 +1,33 @@
+# Where arriving stock goes, per owner. A step into a reserved zone
+# (owner_zones.yaml) needs a rule scoped to one of its owners.
+# Validates against schemas/putaway-rule.schema.json (per entry).
+
+putaway_rules:
+  - id: "PUTAWAY_ALPHA"
+    applies_to:
+      owner: "owner_alpha"
+    steps:
+      - zone: { type: "storage_type", id: "SHELF" }
+        placement_strategy: "FIXED_BIN_FIRST"
+        constraints:
+          load_unit_types: ["carton"]
+      - zone: { type: "activity_area", id: "PUTAWAY_ALPHA" }
+        placement_strategy: "NEXT_EMPTY"
+        constraints:
+          load_unit_types: ["pallet_euro"]
+          allow_mixed_owners: false
+          allow_mixed_lots: false
+
+  - id: "PUTAWAY_BETA"
+    applies_to:
+      owner: "owner_beta"
+    steps:
+      - zone: { type: "storage_type", id: "SHELF" }
+        placement_strategy: "FIXED_BIN_FIRST"
+        constraints:
+          load_unit_types: ["carton"]
+      - zone: { type: "activity_area", id: "PUTAWAY_BETA" }
+        placement_strategy: "NEXT_EMPTY"
+        constraints:
+          load_unit_types: ["pallet_euro"]
+          allow_mixed_owners: false

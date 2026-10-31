@@ -1,0 +1,13 @@
+# Fixed pick faces on the shared carton shelf. Validates against
+# schemas/fixed-bin-assignment.schema.json (per entry). Example values.
+
+fixed_bin_assignments:
+  - item_id: "ALPHA_001"
+    storage_point: "SHELF.S-01-01"
+    min_qty: 24
+    max_qty: 96
+
+  - item_id: "BETA_001"
+    storage_point: "SHELF.S-02-01"
+    min_qty: 10
+    max_qty: 50
