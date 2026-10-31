@@ -215,37 +215,43 @@ Full glossary: [`docs/entity-glossary.md`](docs/entity-glossary.md)
 
 ## Next Steps for This Repo
 
-- [ ] Build out `MasterData-as-Code` far enough that `applies_to.category`/
-      `applies_to.item_id` can be cross-checked against real ids (same
-      category of gap every sibling repo already has against each other).
-- [ ] Cross-check `search_rule.steps[].zone.id` against an actual
-      `Topology-as-Code` `storage_type`/`activity_area` id - not done,
-      same category of gap `OrderOrchestration-as-Code` has for `target.id`.
+Cross-repo checks live in `Warehouse-as-Code`: a site manifest per
+facility binds this repo to the others, and `Warehouse-as-Code/tools/check_sites.py` resolves the ids.
+Consistency rules beyond plain ids are listed there as R1–R12
+(`docs/backlog.md`, C1a).
+
+- [x] ~~Build out `MasterData-as-Code` far enough that `applies_to.category`/
+      `applies_to.item_id` can be cross-checked against real ids~~ - checked
+      by `Warehouse-as-Code/tools/check_sites.py`.
+- [x] ~~Cross-check `search_rule.steps[].zone.id` against an actual
+      `Topology-as-Code` `storage_type`/`activity_area` id~~ - checked by
+      `Warehouse-as-Code/tools/check_sites.py` for every zone in this repo's strategies.
 - [x] ~~Decide whether `applies_to` needs a tie-break rule for two rules
       of equal specificity~~ - with the precedence item_id > owner +
       category > owner > category > default, identical scopes are the only
       possible tie, and `tools/validate.py` rejects them (see
       `docs/entity-glossary.md` "Applies-To Precedence").
-- [ ] Cross-check `applies_to.owner` / `.category` / `.item_id` against
-      `MasterData-as-Code`, and putaway rules scoped by `item_id` against
-      `owner_zones` via the item's owner - cross-repo, not done here.
+- [ ] Putaway rules scoped by `item_id` against `owner_zones` via the
+      item's owner (Warehouse-as-Code R6). `applies_to.owner`/`.category`/
+      `.item_id` themselves are checked by `Warehouse-as-Code/tools/check_sites.py`.
 - [ ] Cross-check `putaway_rule.steps[].constraints.load_unit_types`
-      against `Topology-as-Code` `load_unit_type` ids and the zone's
+      against Topology `load_unit_type` ids and the zone's
       `allowed_load_unit_types`, and `allow_mixed_items: true` against the
-      zone's `homogeneity_required` - not done, same cross-repo gap as
-      zone ids.
-- [ ] Route items to zones by storage condition (e.g. temperature) once
-      `MasterData-as-Code` has such an attribute.
+      zone's `homogeneity_required` (Warehouse-as-Code R4, R5).
+- [x] ~~Route items to zones by storage condition once `MasterData-as-Code`
+      has such an attribute~~ - the attribute exists (`storage_condition`
+      on items and Topology storage types); the check that a putaway rule
+      respects it is Warehouse-as-Code R11.
 - [x] ~~Add a `FIXED_BIN_FIRST` placement strategy once fixed
       item-to-place assignments are modeled~~ - done with
       `strategies/fixed_bin_assignments.yaml`.
-- [ ] Cross-check `fixed_bin_assignments` against `Topology-as-Code`
-      (storage_point exists, its storage_type allows the item's load unit)
-      and `MasterData-as-Code` (item and uom exist; the place's zone is
-      not reserved for another owner) - cross-repo, not done here.
+- [ ] Fixed bins: that the storage point and item exist is checked by
+      `Warehouse-as-Code/tools/check_sites.py`; still open are its storage type allowing the item's load
+      unit, the uom, and the owner zone (Warehouse-as-Code R8–R10).
 - [ ] Consider whether `search_rule` needs an explicit `order_type`/
       `channel` scope (mirroring `OrderOrchestration-as-Code`) in
-      addition to item/category - not yet needed by any real scenario.
+      addition to item/category - not yet needed by any real scenario
+      (Warehouse-as-Code backlog D4).
 
 ### Out of Scope (By Design)
 
