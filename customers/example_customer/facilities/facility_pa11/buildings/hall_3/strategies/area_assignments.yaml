@@ -1,0 +1,22 @@
+# Item-level stock targets per zone without fixed places. Validates
+# against schemas/area-assignment.schema.json (per entry). Typically
+# written by a script from a slotting/ABC analysis; maintained here as
+# the result, not computed. Zone ids are Topology-as-Code's, item ids and
+# uom MasterData-as-Code's. Example values.
+#
+# These item-level min/max win over Topology-as-Code's area-level
+# replenishment_strategy for the same zone.
+
+area_assignments:
+  # Dynamic pick zone: keep 20-60 each of ITEM_001, on whatever points.
+  - item_id: "ITEM_001"
+    zone: { type: "activity_area", id: "PICK_ZONE_A" }
+    uom: "each"
+    min_qty: 20
+    max_qty: 60
+    planned_qty: 40
+
+  - item_id: "ITEM_003"
+    zone: { type: "activity_area", id: "PICK_ZONE_A" }
+    min_qty: 10
+    max_qty: 30

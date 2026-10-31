@@ -93,7 +93,8 @@ allocation-definitions/
 │                       └── strategies/
 │                           ├── search_rules.yaml   # Ordered search sequence per item/category
 │                           ├── putaway_rules.yaml  # Ordered putaway sequence per item/category
-│                           └── fixed_bin_assignments.yaml # Optional: item -> fixed place, min/max
+│                           ├── fixed_bin_assignments.yaml # Optional: item -> fixed place, min/max
+│                           └── area_assignments.yaml  # Optional: item -> zone, min/max/planned
 ├── tools/
 │   ├── validate.py           # Validation script (schema + cross-file consistency checks)
 │   └── precedence.py         # Reference implementation of applies_to precedence
@@ -202,6 +203,13 @@ python -m unittest discover -s tests -v
   `sequence` among several places of the same item. A place is fixed to
   at most one item. Item-level values win over an area-level
   `Topology-as-Code` `replenishment_strategy`.
+- **area_assignment** — item-level stock targets (`min_qty`/`max_qty`,
+  optional `planned_qty`) for one zone **without** fixed places, e.g. a
+  dynamic pick zone. Typically written by a script from a slotting or
+  ABC analysis; this repo stores the result, it does not compute it.
+  Wins over an area-level `replenishment_strategy` for the same zone;
+  inside the zone, a `fixed_bin_assignment` governs the item's fixed
+  places.
 
 Full glossary: [`docs/entity-glossary.md`](docs/entity-glossary.md)
 
