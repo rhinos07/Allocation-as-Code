@@ -25,7 +25,7 @@ putaway_rules:
       - zone: { type: "storage_type", id: "AUTOSTORE_A" }
         placement_strategy: "DELEGATE_TO_CONTROLLER"
         constraints:
-          load_unit_types: ["autostore_bin"]
+          load_unit_types: ["autostore_bin_220", "autostore_bin_330", "autostore_bin_425"]
       - zone: { type: "storage_type", id: "HBR" }
         placement_strategy: "SPREAD_ACROSS_AISLES"
         constraints:
