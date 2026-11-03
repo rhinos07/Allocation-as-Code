@@ -27,9 +27,9 @@ reference `Topology-as-Code` `storage_type`/`activity_area` ids, and
 ids - the same loosely-coupled, string-id cross-repo referencing every
 sibling repo uses. This repo's own `tools/validate.py` does not resolve
 them; `Warehouse-as-Code`'s `tools/check_sites.py` does, per site (see
-"Next Steps" below). `facility.id` and `allocation.id` correspond to the
-facility/building ids in `Topology-as-Code` by convention - the site
-manifest binds them explicitly, no schema enforces it.
+"Next Steps" below). `facility.id` and `allocation.id` must equal the
+facility/building ids in `Topology-as-Code`. No schema here enforces it;
+`Warehouse-as-Code`'s site check rejects a mismatch.
 
 ## Core Principle
 
