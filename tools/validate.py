@@ -179,7 +179,7 @@ def check_owner_zones(path: Path, owner_zones_data: dict | None) -> list[str]:
     step into a reserved zone needs a rule whose applies_to.owner is one
     of the zone's owners. A rule scoped by item_id alone cannot be
     checked here - the item's owner lives in MasterData-as-Code
-    (cross-repo, see Warehouse-as-Code backlog C1a)."""
+    (cross-repo, see Warehouse-as-Code backlog C1)."""
     errors: list[str] = []
     data = load_yaml(path)
     if not data or not owner_zones_data:
@@ -218,7 +218,7 @@ def check_fixed_bin_assignments(path: Path) -> list[str]:
     max_pick_qty <= max_qty, a storage point fixed to at most one item,
     and unique sequence numbers per item. Whether item_id and
     storage_point exist in MasterData-/Topology-as-Code is a cross-repo
-    check (Warehouse-as-Code backlog C1a)."""
+    check (Warehouse-as-Code backlog C1)."""
     errors: list[str] = []
     data = load_yaml(path)
     if not data:
@@ -256,7 +256,7 @@ def check_area_assignments(path: Path, fields_data: dict | None) -> list[str]:
     """Checks strategies/area_assignments.yaml: min_qty <= planned_qty <=
     max_qty, one entry per item and zone, and the zone type allowed by
     structure/fields.yaml. Whether item_id and zone exist in MasterData-/
-    Topology-as-Code is a cross-repo check (Warehouse-as-Code backlog C1a)."""
+    Topology-as-Code is a cross-repo check (Warehouse-as-Code backlog C1)."""
     errors: list[str] = []
     data = load_yaml(path)
     if not data:

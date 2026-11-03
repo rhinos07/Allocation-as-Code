@@ -4,8 +4,10 @@ Allocation-as-Code: declarative, version-controlled description of **how
 a matching stock search is configured for a given item/order demand** -
 which zones to search, in what order, and how to select among matches -
 and of its inbound counterpart, **where an incoming load unit is put
-away** - as YAML, validated via CI. Fills a domain `Warehouse-as-Code`'s
-Domain Map lists as "Not modeled": stock search / allocation strategy.
+away** - as YAML, validated via CI. `Warehouse-as-Code`'s Domain Map
+originally listed stock search / allocation strategy as "Not modeled";
+it now lists this repo as the owner (search side only - its row does not
+yet mention the putaway/placement half this repo also covers).
 
 ## Related Projects
 
@@ -160,7 +162,9 @@ python -m unittest discover -s tests -v
   - `SEARCH_ITEM_003_FEFO` - a more specific rule for `ITEM_003` (the
     same item id used in `OrderOrchestration-as-Code`'s `WMS-POC`
     inbound scenario): `FEFO` with a 30-day minimum remaining shelf
-    life and quality-hold stock excluded, same two zones.
+    life and quality-hold stock excluded, searching only `COLD_ZONE_B` -
+    the one chilled zone, matching `ITEM_003`'s `MasterData-as-Code`
+    `storage_condition`.
   - `PUTAWAY_DEFAULT` - the building's fallback putaway rule: cartons
     first top up their item's fixed places in `FIX` (`FIXED_BIN_FIRST`),
     AutoStore bins go to `AUTOSTORE_A` (the grid controller picks the place),
@@ -169,9 +173,10 @@ python -m unittest discover -s tests -v
     `load_unit_types`, so the step order also ranks which zone each load
     unit type prefers.
   - `PUTAWAY_ITEM_003_LOT_PURE` - lot-pure places for the FEFO item
-    `ITEM_003`, so the FEFO search finds one lot per place. Open:
-    `ITEM_003` cannot be routed to `COLD_ZONE_B` by item property, because
-    `MasterData-as-Code` has no storage-condition attribute yet.
+    `ITEM_003`, so the FEFO search finds one lot per place, routed to
+    `COLD_ZONE_B` only (euro pallets, no mixed items/lots): the default
+    rule's `HBR`/`BLK` steps have no chilled place at all, and
+    `ITEM_003`'s `MasterData-as-Code` `storage_condition` is chilled.
   - `fixed_bin_assignments.yaml` - `ITEM_001` on two fixed places in
     `FIX` (sequence 1 and 2, max 24 per pick), `ITEM_002` on one. These
     item-level min/max win over `Topology-as-Code`'s area-level
@@ -215,43 +220,51 @@ Full glossary: [`docs/entity-glossary.md`](docs/entity-glossary.md)
 
 ## Next Steps for This Repo
 
-Cross-repo checks live in `Warehouse-as-Code`: a site manifest per
-facility binds this repo to the others, and `Warehouse-as-Code/tools/check_sites.py` resolves the ids.
-Consistency rules beyond plain ids are listed there as R1–R12
-(`docs/backlog.md`, C1a).
+Cross-repo referential integrity (ids like `zone.id`, `applies_to.category`/
+`.item_id`, `storage_point`, `uom` actually resolving to something real in
+`Topology-as-Code`/`MasterData-as-Code`) is **not enforced by any repo's
+`tools/validate.py` today**. `Warehouse-as-Code` is deliberately a map,
+not a model - it owns no schemas or tooling of its own (see its README
+"Non-Goals") - so there is no shared checker to defer to yet. `WMS-POC`
+does existence checks as a demo, not as a gate. This is tracked as the
+family's largest remaining structural weakness
+(`Warehouse-as-Code/docs/backlog.md`, item C1); closing it needs a design
+decision first (shared tool vs. per-repo duplication vs. CI-only), not
+code.
 
-- [x] ~~Build out `MasterData-as-Code` far enough that `applies_to.category`/
-      `applies_to.item_id` can be cross-checked against real ids~~ - checked
-      by `Warehouse-as-Code/tools/check_sites.py`.
-- [x] ~~Cross-check `search_rule.steps[].zone.id` against an actual
-      `Topology-as-Code` `storage_type`/`activity_area` id~~ - checked by
-      `Warehouse-as-Code/tools/check_sites.py` for every zone in this repo's strategies.
 - [x] ~~Decide whether `applies_to` needs a tie-break rule for two rules
       of equal specificity~~ - with the precedence item_id > owner +
       category > owner > category > default, identical scopes are the only
       possible tie, and `tools/validate.py` rejects them (see
       `docs/entity-glossary.md` "Applies-To Precedence").
-- [ ] Putaway rules scoped by `item_id` against `owner_zones` via the
-      item's owner (Warehouse-as-Code R6). `applies_to.owner`/`.category`/
-      `.item_id` themselves are checked by `Warehouse-as-Code/tools/check_sites.py`.
-- [ ] Cross-check `putaway_rule.steps[].constraints.load_unit_types`
-      against Topology `load_unit_type` ids and the zone's
-      `allowed_load_unit_types`, and `allow_mixed_items: true` against the
-      zone's `homogeneity_required` (Warehouse-as-Code R4, R5).
-- [x] ~~Route items to zones by storage condition once `MasterData-as-Code`
-      has such an attribute~~ - the attribute exists (`storage_condition`
-      on items and Topology storage types); the check that a putaway rule
-      respects it is Warehouse-as-Code R11.
 - [x] ~~Add a `FIXED_BIN_FIRST` placement strategy once fixed
       item-to-place assignments are modeled~~ - done with
       `strategies/fixed_bin_assignments.yaml`.
-- [ ] Fixed bins: that the storage point and item exist is checked by
-      `Warehouse-as-Code/tools/check_sites.py`; still open are its storage type allowing the item's load
-      unit, the uom, and the owner zone (Warehouse-as-Code R8–R10).
+- [ ] Cross-check `applies_to.category`/`.item_id` against real
+      `MasterData-as-Code` ids, and `search_rule`/`putaway_rule`
+      `zone.id` against real `Topology-as-Code` `storage_type`/
+      `activity_area` ids - part of C1, not yet done anywhere.
+- [ ] Putaway rules scoped by `item_id` against `owner_zones` via the
+      item's owner - `check_owner_zones` explicitly skips `item_id`-scoped
+      rules today, because the item's owner lives in `MasterData-as-Code`
+      (cross-repo, part of C1).
+- [ ] Cross-check `putaway_rule.steps[].constraints.load_unit_types`
+      against Topology `load_unit_type` ids and the zone's
+      `allowed_load_unit_types`, and `allow_mixed_items: true` against the
+      zone's `homogeneity_required` - part of C1.
+- [ ] Route items to zones by storage condition: the attribute already
+      exists on both sides (`storage_condition` on `MasterData-as-Code`
+      items and `Topology-as-Code` storage types) and this repo's own
+      example (`ITEM_003` -> `COLD_ZONE_B`) already models it by hand, but
+      nothing checks that a rule's zones actually include a chilled place
+      for a chilled item - part of C1.
+- [ ] Fixed bins: nothing yet checks that the storage point and item
+      exist, that the storage type allows the item's load unit, the uom,
+      or the owner zone - part of C1.
 - [ ] Consider whether `search_rule` needs an explicit `order_type`/
       `channel` scope (mirroring `OrderOrchestration-as-Code`) in
       addition to item/category - not yet needed by any real scenario
-      (Warehouse-as-Code backlog D4).
+      (`Warehouse-as-Code` backlog item D4).
 
 ### Out of Scope (By Design)
 
