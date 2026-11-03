@@ -1,9 +1,9 @@
 # Lists buildings. Validates against schemas/facility.schema.json
-# id matches Topology-as-Code's customers/example_customer facility - see
-# README "Shared Vocabulary".
+# id matches Topology-as-Code's customers/example_customer facility id
+# (convention, not schema-enforced - see README).
 
 facility:
-  id: "facility_pa11"
+  id: "PA11"
   name: "Plant PA11"
 
   buildings:
