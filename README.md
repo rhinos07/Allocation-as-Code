@@ -21,13 +21,15 @@ pattern (JSON Schema validation, `structure/` vs. `strategies/`,
 | [`MasterData-as-Code`](https://github.com/rhinos07/MasterData-as-Code) | Item/article master data, packaging/UOM hierarchy, sourcing & lifecycle rules |
 | **Allocation-as-Code** (this repo) | How a matching stock search is configured (search-zone sequence, selection strategy, constraints) and where incoming stock is put away (putaway-zone sequence, placement strategy, constraints) |
 
-This repo's `search_rule.steps[].zone` references `Topology-as-Code`
-`storage_type`/`activity_area` ids, and `search_rule.applies_to`
-references `MasterData-as-Code` `category`/`item_id`s - same
-loosely-coupled, string-id cross-repo referencing every sibling repo
-already uses (see each repo's own "Open Validation Gaps"). `facility.id`
-and `allocation.id` are meant to match the same facility/building ids in
-`Topology-as-Code` - convention, not a schema-enforced link.
+This repo's `search_rule.steps[].zone` and `putaway_rule.steps[].zone`
+reference `Topology-as-Code` `storage_type`/`activity_area` ids, and
+`applies_to` references `MasterData-as-Code` `category`/`item_id`/`owner`
+ids - the same loosely-coupled, string-id cross-repo referencing every
+sibling repo uses. This repo's own `tools/validate.py` does not resolve
+them; `Warehouse-as-Code`'s `tools/check_sites.py` does, per site (see
+"Next Steps" below). `facility.id` and `allocation.id` correspond to the
+facility/building ids in `Topology-as-Code` by convention - the site
+manifest binds them explicitly, no schema enforces it.
 
 ## Core Principle
 
