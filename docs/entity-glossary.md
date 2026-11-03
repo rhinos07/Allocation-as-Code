@@ -64,7 +64,7 @@ not done here (Warehouse-as-Code backlog C1).
 |---|---|
 | `applies_to.owner` | Scopes a rule to one stock owner, alone or with `category`. See the precedence table above. |
 | `allow_mixed_owners` | Putaway step constraint: whether one storage place may hold stock of more than one owner (myWMS `mixClient`). |
-| `owner_zones` | Optional `structure/owner_zones.yaml`: zones reserved for given owners (myWMS `onlyClientLocation`). A putaway step into a reserved zone needs a rule whose `applies_to.owner` is one of the zone's owners; a rule without owner (default or category-only) is rejected. Rules scoped by `item_id` are not checked here, because the item's owner lives in `MasterData-as-Code`. Zones not listed are open to every owner. |
+| `owner_zones` | Optional `structure/owner_zones.yaml`: zones reserved for given owners (myWMS `onlyClientLocation`). A putaway step into a reserved zone needs a rule whose `applies_to.owner` is one of the zone's owners; a rule without owner (default or category-only) is rejected. Rules scoped by `item_id` are not checked here, because the item's owner lives in `MasterData-as-Code`; `Warehouse-as-Code` checks them per site (rule R6). Zones not listed are open to every owner. |
 
 That stock of one owner is never allocated to another owner's demand is a
 runtime invariant of the WMS, not configuration - there is nothing to
